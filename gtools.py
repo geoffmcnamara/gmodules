@@ -199,12 +199,13 @@ class Spinner:
     """
     def __init__(self, message="", *args, delay=0.2, style="pipe", prog=False, **kwargs):
         # dbug(f"class: Spinner {funcname()}")
-        self.COLOR = ""
-        color = kvarg_val("color", kwargs, dflt="")
-        self.colors = kvarg_val("colors", kwargs, dflt=[color])
-        if isinstance(color, list):
+        # self.COLOR = ""
+        self.color = kvarg_val(["color"], kwargs, dflt="")
+        self.colors = kvarg_val(["colors", "color"], kwargs, dflt=[self.color])
+        if isinstance(self.color, list):
             self.colors = self.color
-        self.COLOR = sub_color(color)
+        else:
+            self.COLOR = sub_color(self.color)
         txt_color = kvarg_val(["txt_color", 'txt_clr'], kwargs, dflt="")
         self.TXT_COLOR = sub_color(txt_color)
         time_color = kvarg_val(["time_color", 'time_clr', 'elapsed_clr', 'elapsed_time_clr', 'elapsed_color', 'elapse_color', 'elapse_clr'], kwargs, dflt=txt_color)
@@ -232,12 +233,13 @@ class Spinner:
             self.prog = False
         if style == 'clock':
             spinner_chrs = ['🕛', '🕧', '🕐', '🕜', '🕑', '🕝', '🕒', '🕞', '🕓', '🕟', '🕔', '🕠', '🕕', '🕡', '🕖', '🕢' '🕗', '🕣', '🕘', '🕤', '🕙', '🕥', '🕚', '🕦']
+            self.style_len = len(spinner_chrs)
             self.prog = False
         if style == 'moon':
             spinner_chrs = ['🌑', '🌘', '🌗', '🌖', '🌕', '🌔', '🌓', '🌒']
             self.prog = False
         if style == 'vbar':
-            spinner_chrs = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█', '▇', '▆', '▅', '▄', '▃', '▁']
+            spinner_chrs = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█', '▇', '▆', '▅', '▄', '▃', '▂', '▁', ' ']
             self.style_len = len(spinner_chrs)
         if style == 'bar':
             spinner_chrs = ['█', '█', '█', '█', '█']
@@ -287,8 +289,15 @@ class Spinner:
                     self.clr_cnt += 1
                     if self.clr_cnt > len(self.colors) - 1:
                         self.clr_cnt = 0
+                self.chr_cnt += 1
+                if self.chr_cnt > self.style_len - 1:
+                    self.chr_cnt = 0
                 spinner_chr = self.COLOR + str(next(self.spinner)) + self.RESET
-                sys.stdout.write(spinner_chr)
+                if self.style == 'clock' and self.chr_cnt == 17:
+                    # I have absolutely no idea why this is needed for chr 17 but it is. Believe me I beat this to death - it causes a 'blink'
+                    sys.stdout.write('  ')
+                else:
+                    sys.stdout.write(spinner_chr)
                 self.spinner_visible = True
                 sys.stdout.flush()
                 """--== SEP_LINE ==--"""
@@ -298,7 +307,12 @@ class Spinner:
             if self.spinner_visible:
                 if not self.prog:
                     # backover chr if not prog (progressive)
+                    # dbug(f"self.style: {self.style} self.chr_cnt: {self.chr_cnt} self.style_len: {self.style_len}")
                     sys.stdout.write('\b')
+                    # if self.style == 'clock' and (self.chr_cnt == 27 or self.chr_cnt == 17):
+                          # dbug(f"self.style: {self.style} self.chr_cnt: {self.chr_cnt} self.style_len: {self.style_len}")
+                    #     sys.stdout.write('\b')
+                    #     # sys.stdout.write(' ')
                 else:
                     # if progressive then ...
                     # clr_cnt = self.chr_cnt % len(self.colors)
@@ -309,6 +323,8 @@ class Spinner:
                         # if we hit the len of style_len... print elapsed time... then...
                         if self.etime:
                             elapsed_time = round(time.time() - self.start_time, 2)
+                            elapsed_time = f"{elapsed_time:>6}"  # if we go over 999 seconds we will be in trouble with the length
+                            # dbug(elapsed_time)
                             sys.stdout.write(f" {self.TIME_COLOR}{elapsed_time}{self.RESET}")
                             # time.sleep(self.delay)
                             sys.stdout.write("\b" * (len(str(elapsed_time)) + 1))
@@ -326,9 +342,10 @@ class Spinner:
                         sys.stdout.write("\b")
                         sys.stdout.flush()
                         time.sleep(self.delay)
+                        # self.chr_cnt = 0
                 if self.style in ('clock', 'moon'):
                     sys.stdout.write('\b')
-                # if self.chr_cnt > self.style_len:
+                # if self.chr_cnt > self.style_len - 1:
                 #     #dbug("how did we get here")  # not sure if this section is needed
                 #     if self.etime:
                 #         elapsed_time = round(time.time() - self.start_time, 2)
@@ -346,9 +363,10 @@ class Spinner:
             self.write_next()
             if self.etime and not self.prog:
                 elapsed_time = round(time.time() - self.start_time, 2)
+                elapsed_time = f"{elapsed_time:>6}"  # this is to assure proper back over length - if we go over 999 seconds we are in trouble with the length
                 sys.stdout.write(f" {self.TIME_COLOR}{elapsed_time}{self.RESET}")
-                # time.sleep(self.delay)
-                sys.stdout.write("\b" * (len(str(elapsed_time)) + 1))
+                # dbug(len(elapsed_time))
+                sys.stdout.write("\b" * (len(elapsed_time) + 1))
             time.sleep(self.delay)
             self.spin_backover()
             """--== SEP_LINE ==--"""
@@ -892,6 +910,7 @@ def kvarg_val(key, kwargs_d={}, dflt=""):
     # ###################################
     """
     purpose: returns a value when the key in a key=value pair matches any key given
+    - allows multiple ways to enter arguments
     NOTE: key can be a string or a list of strings 
     option: dflt="Whatever default value you want"
     use: used in function to get a value from a kwargs ky=value pair
@@ -952,11 +971,12 @@ def kvarg_val(key, kwargs_d={}, dflt=""):
 
 
 # ###########################################
-def bool_val(s, args_l, kvargs={}, **kwargs):
+def bool_val(strings_l, args_l, kvargs={}, **kwargs):
     # #######################################
     """
-    s can be a str or list
-    args_l must be provided
+    purpose: allows multiple choices or ways to enter bool arguments for a function
+    -    strings_l can be a str or list
+    -    args_l must be provided
     kvargs is optional
     used to see if a string or a list of stings might be declared true
     by being in args or seeing it has a bool value set in kvargs
@@ -968,26 +988,26 @@ def bool_val(s, args_l, kvargs={}, **kwargs):
     """
     # dbug(funcname())
     # dbug(s)
-    if isinstance(s, str):
-        s_l = [s]  # make it a list
-    if isinstance(s, list):
-        s_l = s
+    if isinstance(strings_l, str):
+        s_l = [strings_l]  # make it a list
+    if isinstance(strings_l, list):
+        s_l = strings_l
     # dbug(s_l)
     bool_val = False
     if "default" in kwargs:
         bool_val = kwargs['default']
     if "dflt" in kwargs:
         bool_val = kwargs['dflt']
-    # dbug(f"bool_val s: {s}: args: {args_l} kwargs: {kwargs}")  # for debugging
-    for s in s_l:
+    # dbug(f"bool_val strings_l: {strings_l}: args: {args_l} kwargs: {kwargs}")  # for debugging
+    for string in s_l:
         # dbug(s)
         # dbug(args_l)
         # dbug(kvargs)
-        if s in args_l:
+        if string in args_l:
             bool_val = True
-        if s in kvargs:
-            if isinstance(kvargs[s], bool):
-                bool_val = kvargs[s]
+        if string in kvargs:
+            if isinstance(kvargs[string], bool):
+                bool_val = kvargs[string]
     # dbug(bool_val)
     return bool_val
 
@@ -3165,8 +3185,12 @@ def wrapit(sentence, length=20, color=""):
 
 def get_columns(*args, **kwargs):
     """
-    gets screen/terminal cols OR rows
-    returns int(columns)| int(rows: bool) | int(cols), int(rows) both: bool
+    purpose: gets screen/terminal cols OR rows
+    options:
+    -   rows: bool  <-- returns rows instead of columns
+    -   both: bool  <-- returns [cols, rows]
+    *   don't try to do both... just don't
+    returns: int(columns) | int(rows: bool) | int(cols), int(rows) both: bool
     """
     """--== Config ==--"""
     shift = kvarg_val("shift", kwargs, dflt=0)  # this is probably never used
@@ -7108,14 +7132,15 @@ def remap_keys(my_d, remap_d, *args, **kwargs):
 def quick_plot(data, *args, **kwargs):
     # ################################
     """
-    purpose: quick display of data in  a file or in dataframe
-        displays a plot on a web browser if requested
-    args: data: df | str(filename: csv or dat)
+    purpose: quick display of data (.csv file, or .dat file, or df data)
+    -    displays a plot on a web browser if requested
+    cwrequiredargs: data: df | str(filename: .csv or .dat)
     options: show: bool, choose: bool, footer: str, footer: str tail: int (for the last n rows of the df)
-        choose invokes gselect multi mode to allow selections of columns to display in the plot (graph)
-        tail, title and footer only affect the gtable if show is True
+    -    choose invokes gselect multi mode to allow selections of columns to display in the plot (graph)
+    -    tail, title and footer only affect the gtable if show is True
     return: df
-    NOTE: if a filename is used as data it will get "purified" by removing all comments first (except the first line of a dat file.)
+    NOTE: if a filename is used as data it will get "purified" by removing all comments first (except the first line of a .dat file.)
+    A .dat file uses the first line with a specific syntax as a comment with # title: xlabel: ylable: colname (: sparated)
     """
     """--== Imports ==--"""
     import matplotlib.pyplot as plt
@@ -7123,6 +7148,7 @@ def quick_plot(data, *args, **kwargs):
     import pandas as pd
     """--== debug ==--"""
     # dbug(funcname())
+    # dbug(data)
     """--== Config ==--"""
     show = bool_val(["prnt", "print", "show"], args, kwargs, dflt=False)
     choose = bool_val(["choose", "multi"], args, kwargs, dflt=False)
@@ -7346,18 +7372,19 @@ def spinner_demo():
     # colors = ["red", "blue", "green", "yellow", "magenta", "white", "cyan"]
     # with Spinner(f"Demo progressive vbar ", 'centered', 'prog', 'elapsed', style='vbar', colors=colors):
     #     time.sleep(5)
+    red_shades =['rgb(20,0,0)', 'rgb(40,0,0)', 'rgb(60,0,0)', 'rgb(80,0,0)', 'rgb(100,0,0)', 'rgb(120,0,0)', 'rgb(140,0,0)', 'rgb(160,0,0)', 'rgb(180,0,0)', 'rgb(200,0,0)', '  rgb(220,0,0)', 'rgb(240,0,0)', 'rgb(254,0,0)', 'rgb(254,0,0)', 'rgb(254,0,0)', 'rgb(254,0,0)']
     while True:
         style = gselect(styles, 'centered', 'quit', rtrn="v")
         # style = gselect(styles, 'centered', rtrn="v", colors=colors)
         if style in ("q", "Q", ""):
             break
         wait_time = cinput("For how many seconds: (default=15) ") or 15
-        color = cinput("Input a spinner color Note: if you enter a list (eg ['red', 'green', 'blue']) then the spinner will rotate colors accordingly, default is red!: ") or 'red!'
+        color = cinput("Input a spinner color Note: if you enter a list (eg ['red', 'green', 'blue']) then the spinner will rotate colors accordingly, default is shades of red: ") or red_shades
         txt_color = cinput("Input a text color, default is normal: ") or 'normal'
         time_color = cinput("Input a time color, default is 'yellow! on black': ") or 'yellow! on black'
         printit("Note: some spinner styles will not use the progressive setting...", 'centered')
         prog = askYN("Should we try progressive?", "n", 'centered')
-        printit(f"Demo: Spinner(style: {style} txt_clr: {txt_color} spinner_clr: {color} time_clr: {time_color} Progressive: {prog}... ", 'centered')
+        printit([f"Demo: Spinner(style: {style}", f"txt_clr: {txt_color}", f"spinner_clr: {color[:4]}...", f"time_clr: {time_color}", f"Progressive: {prog}... "], 'centered')
         with Spinner("Demo: Spinner: working... ): ", 'centered', 'elapsed', color=color, txt_color=txt_color, elapsed_clr=time_color, style=style, prog=prog):
             # with Spinner(f"Demo: Spinner(style: {style} txt_clr: {txt_color} spinner_clr: {color} time_clr: {time_color}... ): ", 'centered', 'elapsed', color=color, txt_color=txt_color, elapsed_clr=time_color, style=style):
             time.sleep(wait_time)  # to simulate a long process
