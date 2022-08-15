@@ -5647,24 +5647,32 @@ prcnt_bar = do_prcnt_bar
 def progress(progress, *args, **kwargs):
     # #########################################
     """
+    purpose: Displays a "progress" bar - should probably be better named as percent bar...
+    required: progress: int (precent)
+    options:
+    returns: 
+    Notes: None
     # prcnt = 0.20
     # progress(prcnt, width=60)
-    Percent: [############------------------------------------------------] 20%
-    # or
-    >>> for i in range(100):
-    ...     time.sleep(0.1)
-    ...     progress(i/100.0, width=60)
-    Percent: [############################################################] 99%
-    pseudo: mental exercise only
-        if progress is list:
-            rtrn_l = []
-            tot = len(progress_l)
-            for n, item in enumerate(progress_l):
-                rtrn_l.append(process_func(item))  # process_func needs to be provided else???
-                # eval_this(item)
-                # eval(rtrn_l.append(eval_this)) # ??????
-                ...
+    --- example use ---
+    def long_pocess(url):
+        time.sleep(5)
+        return results
+        """--== SEP_LINE ==--"""
+    urls_l ['url1', 'url2', 'url3', 'url4', 'url5', 'url6', 'url7']
+    for url in urls:
+        prompt = "Working on url: "
+        status = f"Completed: {url}"
+        df1_l = process_url(url)
+        full_l += df1_l
+        cnt += 1
+        prcnt = cnt/tot
+        fill_color=f'rgb({int(255*prcnt)},0,0)'  # increasing red
+        progress(prct, 'centered', fill_color=fill_color)
+        """--== SEP_LINE ==--"""
+    Working on url7 : [############################################################] 99%
     """
+    """--== Config ==--"""
     width = kvarg_val(['bar_width', 'length', 'width'], kwargs, dflt=40)  # Modify this to change the length of the progress bar  # noqa:
     prompt = kvarg_val(['prompt', 'prefix'], kwargs, dflt="")
     color = kvarg_val(['color', 'text_color', 'txt_color', 'txt_clr'], kwargs, dflt="")
@@ -5683,9 +5691,6 @@ def progress(progress, *args, **kwargs):
     """--== SEP_LINE ==--"""
     if isinstance(progress, int):
         progress = float(progress)
-        # if not isinstance(progress, float):
-        # progress = 0
-        # status = "error: progress var must be float\r\n"
     if progress < 0:
         progress = 0
         status = "Halt...\r\n"
@@ -5705,9 +5710,7 @@ def progress(progress, *args, **kwargs):
     prcnt = progress * 100
     """--== SEP_LINE ==--"""
     if center_b:
-        # ruleit() 
         shift -= (int(get_columns()) - (width + nclen(prompt))) // 2
-        # dbug(shift)
         lfill = " " * shift
         prompt = lfill + prompt
     txt = COLOR + f"\r{prompt}[{RESET}" + DONE_COLOR + f"{done_fill}" + RESET + UNDONE_COLOR + f"{undone_fill}" + COLOR + f"] {prcnt}%"
@@ -5716,7 +5719,6 @@ def progress(progress, *args, **kwargs):
     sys.stdout.write('\x1b[?25l')  # Hide cursor
     sys.stdout.write(txt)
     sys.stdout.flush()
-    # dbug(txt)
     return
     # ### EOB def progress(progress, *args, **kwargs): ### #
 
