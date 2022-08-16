@@ -188,7 +188,6 @@ class Spinner:
         prog: bool
         color: str
         txt_color: str
-    return: none
     requires:
         import sys
         import threading
@@ -196,11 +195,16 @@ class Spinner:
     use:
         with Spinner("Working...", style='bar')
             long_proc()
+    return: none
     """
     def __init__(self, message="", *args, delay=0.2, style="pipe", prog=False, **kwargs):
-        # dbug(f"class: Spinner {funcname()}")
-        # self.COLOR = ""
-        self.color = kvarg_val(["color"], kwargs, dflt="")
+        """--== debugging ==--"""
+        # dbug(f"class: Spinner {funcname()} style: {style} args: {args} kwargs: {kwargs}")
+        # dbug(args)
+        # dbug(kwargs)
+        """--== config ==--"""
+        # color = kvarg_val("color", kwargs, dflt="")
+        self.color = color = kvarg_val(["color"], kwargs, dflt="")
         self.colors = kvarg_val(["colors", "color"], kwargs, dflt=[self.color])
         if isinstance(self.color, list):
             self.colors = self.color
@@ -209,6 +213,8 @@ class Spinner:
         txt_color = kvarg_val(["txt_color", 'txt_clr'], kwargs, dflt="")
         self.TXT_COLOR = sub_color(txt_color)
         time_color = kvarg_val(["time_color", 'time_clr', 'elapsed_clr', 'elapsed_time_clr', 'elapsed_color', 'elapse_color', 'elapse_clr'], kwargs, dflt=txt_color)
+        self.time_color = time_color
+        # dbug(time_color)
         self.TIME_COLOR = sub_color(time_color)
         self.centered = bool_val(['center', 'centered'], args, kwargs, dflt=False)
         self.RESET = sub_color('reset')
@@ -219,11 +225,16 @@ class Spinner:
         self.style = kvarg_val("style", kwargs, dflt=style)
         self.prog = bool_val("prog", args, kwargs, dflt=prog)
         self.style_len = kvarg_val(["length", "width"], kwargs, dflt=4)
-        if style == 'ellipsis':
+        """--== set default ==--"""
+        spinner_chrs = ['.', '.', '.', '.']  # the default will be ellipsis
+        self.prog = True  # the default
+        """--== SEP_LINE ==--"""
+        if style in ('ellipsis', 'elipsis', 'elipses', 'ellipses'):  # for the spelling challenged like me
             spinner_chrs = ['.', '.', '.', '.']
             # spinner_chrs = ['.' * self.style_len]
             self.style_len = len(spinner_chrs)
             self.prog = True
+            # dbug(f"Style: {self.style} prog: {self.prog} style_len: {self.style_len} color: {self.color} time_color: {self.time_color}")
         if style == "pipe":
             spinner_chrs = ['/', '-', '\\', '|']
             self.prog = False
@@ -289,15 +300,24 @@ class Spinner:
                     self.clr_cnt += 1
                     if self.clr_cnt > len(self.colors) - 1:
                         self.clr_cnt = 0
-                self.chr_cnt += 1
-                if self.chr_cnt > self.style_len - 1:
-                    self.chr_cnt = 0
                 spinner_chr = self.COLOR + str(next(self.spinner)) + self.RESET
-                if self.style == 'clock' and self.chr_cnt == 17:
-                    # I have absolutely no idea why this is needed for chr 17 but it is. Believe me I beat this to death - it causes a 'blink'
-                    sys.stdout.write('  ')
+                if self.style == 'clock':
+                    if self.chr_cnt >= self.style_len:
+                        self.chr_cnt = 0
+                    else:
+                        self.chr_cnt += 1
+                if self.style == 'clock':
+                    if nclen(spinner_chr) > 1:
+                        # I have absolutely no idea why this is needed but it is. Believe me I beat this to death - it causes a 'blink'
+                        # dbug(f"self.style: {self.style} self.chr_cnt: {self.chr_cnt} self.style_len: {self.style_len} spinner_chr: {spinner_chr} nclen(spinner_chr)) {nclen(spinner_chr)}")
+                        sys.stdout.write('  ')
+                    else:
+                        # dbug(f"self.style: {self.style} self.chr_cnt: {self.chr_cnt} self.style_len: {self.style_len} spinner_chr: {spinner_chr} nclen(spinner_chr)) {nclen(spinner_chr)}")
+                        sys.stdout.write(spinner_chr)
                 else:
+                    # dbug(f"self.style: {self.style} self.chr_cnt: {self.chr_cnt} self.style_len: {self.style_len} spinner_chr: {spinner_chr} nclen(spinner_chr)) {nclen(spinner_chr)}")
                     sys.stdout.write(spinner_chr)
+                # sys.stdout.write(spinner_chr)
                 self.spinner_visible = True
                 sys.stdout.flush()
                 """--== SEP_LINE ==--"""
@@ -309,15 +329,12 @@ class Spinner:
                     # backover chr if not prog (progressive)
                     # dbug(f"self.style: {self.style} self.chr_cnt: {self.chr_cnt} self.style_len: {self.style_len}")
                     sys.stdout.write('\b')
-                    # if self.style == 'clock' and (self.chr_cnt == 27 or self.chr_cnt == 17):
-                          # dbug(f"self.style: {self.style} self.chr_cnt: {self.chr_cnt} self.style_len: {self.style_len}")
-                    #     sys.stdout.write('\b')
-                    #     # sys.stdout.write(' ')
                 else:
                     # if progressive then ...
                     # clr_cnt = self.chr_cnt % len(self.colors)
                     # self.COLOR = self.colors[clr_cnt]
                     # dbug(self.COLOR)
+                    # dbug(f"prog: {self.prog} chr_cnt: {self.chr_cnt} style_len: {self.style_len}")
                     self.chr_cnt += 1
                     if self.chr_cnt > self.style_len:
                         # if we hit the len of style_len... print elapsed time... then...
@@ -345,7 +362,7 @@ class Spinner:
                         # self.chr_cnt = 0
                 if self.style in ('clock', 'moon'):
                     sys.stdout.write('\b')
-                # if self.chr_cnt > self.style_len - 1:
+                # if self.chr_cnt > self.style_len:
                 #     #dbug("how did we get here")  # not sure if this section is needed
                 #     if self.etime:
                 #         elapsed_time = round(time.time() - self.start_time, 2)
@@ -366,6 +383,7 @@ class Spinner:
                 elapsed_time = f"{elapsed_time:>6}"  # this is to assure proper back over length - if we go over 999 seconds we are in trouble with the length
                 sys.stdout.write(f" {self.TIME_COLOR}{elapsed_time}{self.RESET}")
                 # dbug(len(elapsed_time))
+                # time.sleep(self.delay)
                 sys.stdout.write("\b" * (len(elapsed_time) + 1))
             time.sleep(self.delay)
             self.spin_backover()
@@ -383,7 +401,7 @@ class Spinner:
     def __exit__(self, exc_type, exc_val, exc_traceback):
         self.busy = False
         if sys.stdout.isatty():
-            #self.busy = False
+            # self.busy = False
             # end_time = time.time()
             # self.elapsed_time = (end_time - self.start_time)
             # sys.stdout.write(f"({self.elapsed_time})")
@@ -5658,7 +5676,7 @@ def progress(progress, *args, **kwargs):
     def long_pocess(url):
         time.sleep(5)
         return results
-        """--== SEP_LINE ==--"""
+        ###--== SEP_LINE ==--###
     urls_l ['url1', 'url2', 'url3', 'url4', 'url5', 'url6', 'url7']
     for url in urls:
         prompt = "Working on url: "
@@ -5669,7 +5687,7 @@ def progress(progress, *args, **kwargs):
         prcnt = cnt/tot
         fill_color=f'rgb({int(255*prcnt)},0,0)'  # increasing red
         progress(prct, 'centered', fill_color=fill_color)
-        """--== SEP_LINE ==--"""
+        ###--== SEP_LINE ==--###
     Working on url7 : [############################################################] 99%
     """
     """--== Config ==--"""
@@ -5791,23 +5809,22 @@ def from_to(filename, begin, end, *args, include="none", **kwargs):
 def add_content(file, content="", header="", **kvargs):
     # ########################################################
     """
-    WIP
-    This is soooooooo ugly.... needs much refarctoring TODO
-    I wrote this because I am constantly building csv files with a header line 
-    Required:
-        file
-        content=str|list
-    Options:
-        after=pattern
-        before=pattern
-        replace=pattern
-        position=##
-        if none of those content is appended to the file
-        if header is also included it will be added to the begining of the file if it does not already exitst
-    used_to_be: add_line()
+    pupose: re-writes a file with an added line (after or before a pattern) or replace a line, or append a line
+    -    I wrote this because I am constantly building csv files with a header line 
+    required:
+    -    file
+    -    content=str|list
+    options:
+    -    after=pattern
+    -    before=pattern
+    -    replace=pattern
+    -    position=##
+    ---- if none of the options above are declared the  content is appended to the end of the file
+    -    if a header is also included (as a commented first line) it will be added to the begining of the file if it does not already exist
     """
+    """--== debugging ==--"""
     # dbug(funcname(), 'centered')
-    """--== set needed vars ==--"""
+    """--== Config ==--"""
     position = kvarg_val('position', kvargs, dflt=None)
     after = kvarg_val("after", kvargs, dflt="")
     before = kvarg_val("before", kvargs, dflt="")
@@ -5926,8 +5943,8 @@ def add_content(file, content="", header="", **kvargs):
         if header not in first_line:
             # dbug(f"Header not found ... so inserting header: {header} at position 0")
             insert_line(file, header, position=0)
-        else:
-            dbug(f"Header already exists in the first_line: {first_line}", dbug=DBUG)
+        # else:
+            # dbug(f"Header already exists in the first_line: {first_line}", dbug=DBUG)
     if show:
         printit(cat_file(file), 'boxed', title=f" {funcname()}() ")
     return
@@ -7419,11 +7436,16 @@ def tst():
     """--== SEP_LINE ==--"""
 
 def do_func_docs():
+    """--== geta list of all funcs ==--"""
     my_lines = grep_lines(__file__, r"^def .*\(")
     my_funcs_l = [x.replace("def ", "") for x in my_lines]
     funcs_l = [re.sub(r"\((.*)\):.*", "", x) for x in my_funcs_l]
+    """--== filter some out ==--"""
     funcs_l = [x for x in funcs_l if x.strip() not in ("main", 'tst')]
+    funcs_l = [x for x in funcs_l if "demo" not in x]
+    """--== sort ==--"""
     funcs_l = sorted(funcs_l)
+    """--== user select ==--"""
     # func = gselect(stripped_funcs_l, 'centered', title="Which Function would you like information on:")
     func = gselect(funcs_l, 'centered', title="Which Function would you like information on:")
     if func not in ("", "q", "Q"):
