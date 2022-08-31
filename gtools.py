@@ -395,7 +395,7 @@ class Spinner:
 class Transcript:
     # #####################
     """
-    Transcript - direct print output to a file, in addition to terminal.
+    Transcript - direct print output to a file, in addition to terminal. It appends the file target
     Usage:
         import transcript
         transcript.start('logfile.log')
@@ -926,18 +926,20 @@ def gselect(selections, *args, **kwargs):
     options: 
     - prompt, center, title, footer, dflt, width, box_color, color, show, 
     - rtrn='k|key' or 'v|val|value' <-- tells gselect whether you want it to return a key or a value from a supplied list or dictionary
+            This is an important option and allows control over what gets returned. See the Notes below.
     - show="k|key" or 'v|val|value' <-- tells gselect whether to display a list of keys or a list of values
     - quit: bool <-- add "q)uit" to the prompt and will do a sys.exit() if ans in ("q","Q","exit")
     - multi <-- allows multiple selections and returns them as a list
-    - default
+    - default|dflt='':   # allows you to /declare a default if enter is hit
     - quit
-    - rtrn="v" str  # return the selected 'k'ey or 'v'alue
-    - show='k' str  # whether to show or display 'k'eys or 'v'alues
+    - rtrn="v" str       # return the selected 'k'ey or 'v'alue
+    - show='k' str       # wh/ether to show or display 'k'eys or 'v'alues
     - title
     - footer
     - color
     - box_color
     - width
+    Notes: with a simple list by default it will return the value in the list - if you want the menu number then use rtrn='k' option!!!
     returns: either key(s) or value(s) as a string or list (if multiple), your choice
     examples:
     > tsts = [{1: "one", 2: "two", 3: "three"},["one", "two", "three"], {"file1": "path/to/file1", "file2": "path/to/file2"} ]
@@ -1298,12 +1300,13 @@ def bool_val_demo():
 
 def docvars(*args, **kvargs):
     """
+    purpose: wrapper for function to allow variable substitution within its doc
     I use this in front on a function I call handleOPTS(args)
     which works with the module docopts
     Thank you to stackoverflow.com: answered Apr 25 '12 at 1:54 senderle
     this is a very useful way to allow variables in your __doc__ strings
     wrap a function with this and use if this way
-   
+    eg: 
     @docvars(os.path.basename(__file__), anotherarg, myarg="abcd")
     def myfunc():
         \"""
@@ -1322,9 +1325,13 @@ def docvars(*args, **kvargs):
 
 
 def fstring(s):
+    """
+    purpose: alternative to f-strings
+    use: fsting(s)
+    returns: formated s string
+    """
     # alternate to f-strings
     # requires: from inspect import currentframe
-    # WIP
     # this is an alternative to f-string
     # use: [instead of f"my string contains {myvar}"]
     # f("my string contains {myvar}")
@@ -1340,7 +1347,7 @@ def handleCFG(cfg_file="", *args, **kwargs):
     input: cfg_file: str
     defaults: cfg_file if it exists is: {myappname.basename}.cfg
     returns: cfg_d: dict (dictionary of dictionaries - cfg.sections with key, val pairs)
-    sample use:
+    use:
         cfg_d = handleCFG("/my/path/to/myapp.cfg")
         title = cfg_d['menu']['title']
     """
@@ -1410,12 +1417,13 @@ def handleCFG(cfg_file="", *args, **kwargs):
 
 def browseit(url):
     """
-    WIP
+    purpose: opens the url in your browser
+    requires: url: str
+    returns: none
     """
     import webbrowser
     # webbrowser.open_new(url)
     webbrowser.open(url, new=0)
-
 
 
 @docvars(os.path.basename(__file__))
@@ -1937,7 +1945,7 @@ def cat_file(fname, *args, prnt=False, lst=False, **kwargs):
     """
     purpose: reads a file and return lines or rows_lol (list of list) or as a df (dataframe)
     options: 
-    -    prnt: bool, 
+    -    prnt: bool,  # prints out the file contents
     -    lst: bool,   # returns a list of lines or you could use: txt.split('\n') to make it a list 
     -    csv: bool,   # treat the file as a csv (or for me, a dat file) 
     -    xlsx: bool,  # returns df of a spreadsheet file
@@ -2717,7 +2725,12 @@ def gcolumnize(msg_l, *args, width=0, color="", **kwargs):
     """
     purpose: This will columnize (vertically) a list
     input: msg_l: list|lol, width=0: int, color="": str
-    options: sep: str
+    options: 
+        - sep: str
+        - prnt|print|show = False: bool 
+        - centered = False: bool  # only invoked if prnt == True
+        - title = "": str   # only invoked if prnt == True
+        - footer = "": str  # only invoked if prnt == True
     return: lines: list
     required: import columnize
     If it is a list of lists ( like several boxes made up of lines ) then
@@ -2750,6 +2763,12 @@ def gcolumnize(msg_l, *args, width=0, color="", **kwargs):
     sep = kvarg_val(['sep'], kwargs, dflt=1)
     cntr_cols = kvarg_val(["cntr_cols", "center_cols", "cols_cntr", "cols_center"], kwargs, dflt=[])
     my_lol = msg_l
+    prnt = bool_val(['prnt', 'print', 'show'], args, kwargs, dflt=False)
+    boxed_b = bool_val(['boxed', 'box'], args, kwargs, dflt=False)
+    box_color = kvarg_val(['box_color', 'box_clr', 'border_color', 'border_style'], kwargs, dflt="")
+    centered_b = bool_val(['center', 'centered', 'cntr', 'cntrd'], args, kwargs, dflt=False)
+    title = kvarg_val(['title'], kwargs, dflt="")
+    footer = kvarg_val(['footer'], kwargs, dflt="")
     # dbug(my_lol, 'ask')
     # dbug(color)
     """--== Init ==--"""
@@ -2838,6 +2857,8 @@ def gcolumnize(msg_l, *args, width=0, color="", **kwargs):
             break
     # for line in lines:
     #     dbug("[" + line + "]")
+    if prnt:
+        printit(lines, boxed=boxed_b, centered=centered_b, title=title, footer=footer, box_color=box_color)
     return lines
     # ### EOB def gcolumnize(boxes, width=0): ### #
 
@@ -2848,10 +2869,19 @@ gcolumnized = gcolumnize
 # #################################
 def sayit(msg, *args, prnt=True, **kwargs):
     # #############################
+    """
+    purpose: will use computer voice to "say" the msg
+    options
+    - prnt: will print as well
+    returns: None
+    """
+    """--== Imports ==--"""
     import pyttsx3
+    """--== Config ==--"""
     rate = kvarg_val(['rate'], kwargs, dflt=150)
     volume = kvarg_val(['vol', 'volume'], kwargs, dflt=0.8)
     gender = kvarg_val(['gender'], kwargs, dflt="m")
+    """--== Init ==--"""
     engine = pyttsx3.init()
     engine.setProperty('rate', rate)   # rate is w/m 
     engine.setProperty('volume', volume) 
@@ -2866,10 +2896,11 @@ def sayit(msg, *args, prnt=True, **kwargs):
     #        msg = f"The time is {date.today().strftime('%B %d %Y')}. My voice is {voice}"
     #        print(msg)
     #        engine.say(msg)
-    if prnt:
-        printit(msg)
+    """--== Process ==--"""
     engine.say(msg)
     engine.runAndWait()
+    if prnt:
+        printit(msg)
 
 
 
@@ -2996,7 +3027,10 @@ def printit(msg, *args, **kwargs):
 
 def clr_coded(msg_s):
     """
-    decode a string - replace [color].*[/] with code and reset
+    purpose: takes any msg string containing tags for colors and decodes them into a colorized string
+    requires: msg_s: str
+    returnd: colorized string
+    decode a string - replace \[color\].*[\/] with code and reset
     requires a space before the first bracket
     """
     """--== debug ==--"""
@@ -3171,6 +3205,11 @@ def gclr(color='normal', text="", **kwargs):
 
 
 def clr_tst(CODE, color="unknown"):
+    """
+    purpose: strickly for developer use - given an ansi color CODE will display it in a way to see if it works as expected
+    displays COLOR_TEST: This should be displayed using CODE
+    returns: None
+    """
     # This is strictly for developer testing
     if not CODE.startswith(PRFX):
         dbug(f"clr_tst(CODE, color='unknown') - apprently CODE does not seem like a color CODE... returning...")
@@ -3190,7 +3229,6 @@ def clr_tst(CODE, color="unknown"):
 
 def shades(color, num=16):
     """
-    WIP
     purpose: returns a list of increasing intensity color shades 
     requires = color: str
     options:
@@ -3258,7 +3296,24 @@ def rgb(r=80, g=80, b=140, text="", fg=False, bg=False, prfx=False, reset=False)
 
 
 def xlate_clr(color):
-    """--== Xlate special colors to rgb() ==--"""
+    """
+    purpose: translates special color names to rgb(r,g,b) for processing
+    requires: special color eg:
+    - greyXX | grayXX  # where XX is a precent gradient of gray from 0,0,0 for black! to 255,255,255 white
+    - white!           # solid 255,255,255 white
+    - black!           # solid 0,0,0 black
+    - red!             # solid bright 255,0,0 red
+    - green!           # solid bright 0,255,0 green
+    - blue!            # solid bright 0,0,255 blue
+    - blue!            # solid bright 0,0,255 blue
+    - blue!            # solid bright 0,0,255 blue
+    - yellow!          # solid bright 255,255,0 yellow
+    - magenta!         # solid bright 255,0,255 magenta
+    - cyan!            # solid bright 0,255,255 cyan
+    returns: rgb(r,g,b) text string instead of supplied color
+
+    --== Xlate special colors to rgb() ==--
+    """
     grey_tone = re.search(r"(gr[ea]y)(\d+)", color)
     if grey_tone:
         grey_word = grey_tone[1]
@@ -4100,7 +4155,8 @@ def doline(length=0, msg="nomsg", *args, **kvargs):
 # ##################################
 def do_title_three_line(msg, *args, hchr="=", length=120, color="", box_color="", prnt=True, center=False, **kvargs):
     # ##############################
-    """  # noqa:
+    """
+    This is deprecated and will be removed
     Use: do_title_three_line(msg,length=120)
     This should probably be made into a class and combined with do_title
     # >>> do_title_three_line("mytitle",30)
@@ -4148,6 +4204,7 @@ def do_title_three_line(msg, *args, hchr="=", length=120, color="", box_color=""
 def do_title(title="", hchr="=", length=120, color="", one_three_line=1, prnt=False, center=True, edge="=", **kvargs):
     # ##############
     """
+    deprecated and will be removed
     20210208-1203 significant refactoring done
     A quick-n-dirty utility to print out a title line using
     title = as the title string
@@ -4251,6 +4308,7 @@ def get_boxchrs(box_style="single", *args, **kwargs):
 def gtable(lol, *args, **kwargs):
     # #####################################################################
     """
+    purpose: returns lines or displays a colorized table from a list_of_lists, df, or dictionary
     input: rows: str|list|dict|list_of_lists|list_of_dicts|dataframe
     options: 
         - color: str, 
@@ -4266,7 +4324,7 @@ def gtable(lol, *args, **kwargs):
         - footer: str,
         - indexes: bool, 
         - box_style: str,  
-        - max_col_len: int, 
+        - max_col_len|col_limit|col_len...: int,  default=60
         - human: bool, 
         - rnd: int, 
         - sortby: str, 
@@ -4281,6 +4339,7 @@ def gtable(lol, *args, **kwargs):
     Notes:
         if colnames="firstrow" then the firstrow will be extracted and used for the header
         if colnames="keys" and we are passed a dictionary then the colnames will be the dictionary keys
+    I frequenly use this function for financial data analysis or csv files 
     TODO: add head: int and tail: in
     """
     """--== debugging ==--"""
@@ -4314,7 +4373,7 @@ def gtable(lol, *args, **kwargs):
     title = kvarg_val('title', kwargs, dflt="")
     # dbug(title)
     footer = kvarg_val('footer', kwargs, dflt="")
-    indexes = bool_val(['indexes', 'index', 'idx', 'id', 'indx'], args, kwargs, dflt=True)
+    indexes = bool_val(['indexes', 'index', 'idx', 'id', 'indx'], args, kwargs, dflt=False)
     # dbug(indexes)
     # dbug(indexes)
     box_style = kvarg_val(['style', 'box_style'], kwargs, dflt='single')
@@ -4323,7 +4382,7 @@ def gtable(lol, *args, **kwargs):
     if len(alt_color) > 2 and not alt_color.strip().startswith("on"):
         alt_color = "on " + alt_color
     alt = bool_val('alt', args, kwargs, dflt=False)
-    max_col_len = kvarg_val(['max_col', 'max_col_len', 'width', 'col_limit'], kwargs, dflt=60)
+    max_col_len = kvarg_val(['max_col', 'max_col_len', 'width', 'col_limit', 'max_limit', 'max_len', 'col_len'], kwargs, dflt=60)
     wrap_b = bool_val(["wrap", "wrapit"], args, kwargs, dflt=False)
     neg = bool_val('neg', args, kwargs, dflt=False)
     rnd = kvarg_val(['rnd', 'round'], kwargs, dflt="")
@@ -4436,7 +4495,7 @@ def gtable(lol, *args, **kwargs):
         if indexes:
             new_lol = []
             for n, row in enumerate(lol):
-                row.insert(0, n)
+                row.insert(0, str(n))
                 new_lol.append(row)
             lol = new_lol
     # dbug(lol)
@@ -4574,12 +4633,11 @@ def gtable(lol, *args, **kwargs):
                     # should test len(item) here? and wrapit if  needed
                     item = str(item)
                     # dbug(item)
-                    item = item[:max_col_len]
+                    item = item[:max_col_len]  # trim it if it is too long
                     # dbug(item)
                     new_elem.append(item)
                 elem = new_elem
-                # dbug(elem)
-                # dbug(new_elem)
+                # dbug(f"elem): [{elem}] new_elem: [{new_elem}]")
             else:
                 # elem is not a list type
                 if nclen(elem) > max_col_len:
@@ -4588,6 +4646,7 @@ def gtable(lol, *args, **kwargs):
                         elem = elem[:max_col_len]
             # dbug(elem)
             new_row.append(elem)
+        # dbug(new_row)
         new_lol.append(new_row)
     # dbug(f"wrap_b: {wrap_b} max_col_len: {max_col_len}")
     """--== SEP_LINE ==--"""
@@ -4600,16 +4659,6 @@ def gtable(lol, *args, **kwargs):
             # dbug(f"col_num: {col_num} elem: {elem} row: {row}")
             if col_num == 0:
                 msg = ""
-            # not a header row...
-            # if isnumber(elem):
-            #     if neg:
-            #         # dbug(elem)
-            #         # elem = color_neg(elem, 'reset', rnd=rnd)
-            #         neg_color = "red on rgb(0,0,0)"
-            #         pos_color = "bold green on rgb(0,0,0)"
-            #         elem = color_neg(elem, rnd=rnd, neg_color=neg_color, pos_color=pos_color)
-            #         myfill = RESET + " " * (max_elem_len[col_num] - nclen(str(elem)))
-            # dbug(elem)
             mycolor = color  # the default passed as a Config above
             if col_colors != []:
                 # now change mycolor to appropriate col_colors
@@ -4668,7 +4717,6 @@ def gtable(lol, *args, **kwargs):
                 lines.append(line)
         return msg
         # ### EOB def bld_row_line(row): ### #
-    # dbug(max_elem_len)
     """--== Process ==--"""
     # dbug(lol[0])
     # dbug(lol[1])
@@ -4765,7 +4813,7 @@ def gtable(lol, *args, **kwargs):
     num_cols = len(lol[0])
     # dbug(lol)
     # dbug(num_cols)
-    """--== condition an numbers ==--"""
+    """--== condition any numbers ==--"""
     # Condition any numbers before measuring the lenght (see next block)
     if neg or rnd != "" or human:
         new_lol = []
@@ -4777,8 +4825,8 @@ def gtable(lol, *args, **kwargs):
                 new_row.append(elem)
             new_lol.append(new_row) 
         lol = new_lol
-    """--== get length for each col ==--"""
-    # Now get max length for each column - in a series of steps
+    """--== get max_elem_len[col] length for each col ==--"""
+    # Now get max length for each column - in a series of steps using lol[0]
     for idx in range(num_cols):
         # initializes a max_elem_len for each col using row one (lol[0])
         hdr_elem = str(lol[0][idx])
@@ -4786,26 +4834,22 @@ def gtable(lol, *args, **kwargs):
         max_elem_len.append(hdr_elem_len)
     # dbug(max_elem_len)
     new_lol = []
-    # dbug(len(lol))
     for row_num, row in enumerate(lol):
+        new_row = []
         # for each row in lol... get length
-        # max_row_lines[row_num] = 1  # this was done above
-        # dbug(row_num)
-        # dbug(max_row_lines[row_num])
+        # dbug(f"max_row_lines[{row_num}]: max_row_lines[row_num]") 
         # calc max_elem_len for each col
         if row == []:
             # skip a blank or empty row
             continue
-        new_row = []
         for col_num, elem in enumerate(row):
             # for each elem in row
             # dbug(elem)
             my_elem = elem
             if not isinstance(elem, list):
-                # if it has line breaks, make it a list
+                # if str(elem) has line breaks, make it a list
                 if "\n" in str(my_elem):
                     my_elem = str(elem).split("\n")
-                    # dbug(my_elem)
             """--== is this a muti_line row? ==--"""
             if isinstance(my_elem, list):
                 # for measuring length purposes only
@@ -4819,30 +4863,12 @@ def gtable(lol, *args, **kwargs):
                     if nclen(my_elem) > max_elem_len[col_num]:
                         max_elem_len[col_num] = nclen(my_elem) + 2  # adding some padding
                         # dbug(f"elem: {my_elem} len(my_elem): {len(my_elem)} max_elem_len[{col_num}]: {max_elem_len[col_num]}")
-            # if isnumber(elem):
-            #     # dbug(repr(row))
-            #     # dbug(f"sending elem: {repr(elem)} to cond_num()")
-            #     elem = cond_num(elem, neg=neg, human=human, rnd=rnd)
-            # dbug(f"max_elem_len[col_num]: {max_elem_len[col_num]} col_num: {col_num} nclen(str(elem): {nclen(str(elem))} elem: {elem}")
-            # if max_elem_len[col_num] < nclen(str(my_elem)):
-            # dbug(f"row_num: {row_num} col_num: {col_num} my_elem: {my_elem}")
+            # now set max_elem_len[col_num] for each elem
             if nclen(str(my_elem)) > max_elem_len[col_num]:
                 max_elem_len[col_num] = nclen(str(my_elem))  # set max col width
                 # dbug(f"elem: {my_elem} len(my_elem): {len(str(my_elem))} max_elem_len[{col_num}]: {max_elem_len[col_num]}")
-            """--== this below not needed - see above is this a multi_line row? ==--"""
-            #if isinstance(my_elem, list):
-            #    # this must be a multi_line elem
-            #    # dbug(f"row_num: {row_num} row: {row} my_elem: {my_elem}  type(my_elem): {type(my_elem)} elem: {elem}")
-            #    if len(my_elem) > max_row_lines[row_num]:
-            #        # lets take the opportunity to set the max_row_lines[row_num - 1] for this row - ie: set the multi_line number
-            #        # dbug(f"my_elem: {my_elem} len(my_elem): {len(my_elem)}")
-            #        max_row_lines[row_num - 1] = len(my_elem)
-            #    # now set the max str len of items in my_elem list
-            #    # dbug(f"max_elem_len[col_num]: {max_elem_len[col_num]} str(my_elem): {str(my_elem)}")
-            #    this_elem_max_len = len(max(my_elem, key=len))
-            #    if max_elem_len[col_num] < this_elem_max_len:
-            #        max_col_len[col_num] = this_elem_max_len
             new_row.append(elem)    
+        # dbug(new_row)
         new_lol.append(new_row)
     # dbug(max_elem_len)
     # dbug(max_row_lines)
@@ -4883,16 +4909,17 @@ def gtable(lol, *args, **kwargs):
                         # elem is not multi_line (ie not a list)
                         if add_row_num > 0:
                             # elem is not type list  and we are past the first row so just add the blank elem 
-                            new_elem = "  "
+                            new_elem = " "
                         else:
-                            new_elem = elem
+                            new_elem = elem[:max_elem_len[elem_num]]
                             elem_line_num = 0
-                    # dbug(f"Adding new_elem: {new_elem} to new_row: {new_row}")
+                    # dbug(f"Adding new_elem: {new_elem} to new_row: {new_row} max_elem_len[{elem_num}]: {max_elem_len[elem_num]}")
                     new_row.append(new_elem)
                 # dbug("end of looping through elems in row")
                 # this is one of the multi_line rows to add - there will be max_row_lines added
                 # dbug(f"Ending loop for adding new_row: {new_row}")
                 elem_line_num += 1
+                # dbug(new_row)
                 last_msg = bld_row_line(new_row) 
             # dbug(f"ending loop for adding multi_line rows last_msg: {last_msg}")
         if row_num == 0 and header:
@@ -5915,23 +5942,26 @@ def do_edit(file, lnum=0):
 
 def cinput(prompt, *args, **kwargs):
     """
-    centered input
+    aka: centered input
+    purpose: gets input from user using provided promt - centers the prompt on the screen
+    options:
+        - shift: int   # allows you to shift the position of the prompt (from the center) eg shift=-5
+        - quit|exit|close: bool   # will quit with do_close() if availaable or just sys.exit()
     """
     # dbug(args)
     # dbug(kwargs)
     """--== Config ==--"""
-    close = bool_val('close', args, kwargs)
-    quit = bool_val(['quit', 'exit'], args, kwargs, dflt=False)
+    quit = bool_val(['quit', 'exit', 'close'], args, kwargs, dflt=False)
     shift = kvarg_val('shift', kwargs, dflt=0)
     """--== Process ==--"""
     if prompt == "":
         prompt = "Hit Enter to continue..."
     ans = input(printit(prompt, 'centered', prnt=False, shift=shift, rtrn_type='str')) or ""
-    if close and quit and ans.lower() == "q":
-        # if rich:
-        #     rclose("Exiting as requested...", 'centered')
-        # else:
-        do_close("Exiting as requested...", 'centered')
+    if quit and ans.lower() == "q":
+        try:
+            do_close("Exiting as requested...", 'centered')
+        except:
+            sys.exit()
     return ans
 
 
@@ -7693,6 +7723,43 @@ def boxed_demo():
 
 def gtable_demo():
     """--== SEP_LINE ==--"""
+    tst_d = {"simple": "table", "goes": "here", "line three": "this is a very very long exstensive and verbose line or string", "line four": "If you thought that last line was long it was only because you had not come across this very long, exstensively verbose, long line."}
+    gtable(tst_d, 'prnt', 'centered', title="tst_d dict no wrap defaut col_limit=60", footer=dbug('here'))
+    gtable(tst_d, 'prnt', 'centered', title="tst_d dict no wrap col_limit=140", col_limit=140, footer=dbug('here'))
+    gtable(tst_d, 'prnt', 'centered', 'wrap', title="tst_d dict w/wrap", footer=dbug('here'))
+    gtable(tst_d, 'prnt', 'centered', 'wrap', title="tst_d dict w/wrap and col_limit=30", footer=dbug('here'), col_limit=30)
+    dbug('ask', 'centered')
+    printit("Now run gtable with: tst_d dict w/hdr & end_hdr, wrap, alt, index and clolimit=30", 'centered')
+    box1 = gtable(tst_d, 'header', 'wrap', title="Short title w/wrap", footer=dbug('here'), end_hdr=True, col_limit=30)
+    box2 = gtable(tst_d, 'header', 'index', 'alt', 'wrap', title="Short title w/wrap, alt, and w/index", footer=dbug('here'), end_hdr=True, col_limit=30)
+    gcolumnize([box1, box2], 'prnt', 'centered', 'boxed', title="Two gtables boxed and centered", box_color="yellow! on black", footer=dbug('here'))
+    dbug('ask', 'centered')
+    """--== SEP_LINE ==--"""
+    my_lol = [["name", "value", "make", "model"], ["two", "2", "foo", "bar"], ["twenty_two", "22", "bing", "bang"], 
+            ["one", "1", "boom", "bam"], ["five", "5", "tik", "tok"], ["three", "3", "string", "strum"], ["four", "4", "ping", "pong"]]
+    title = "with hdr and alt"
+    gtable(my_lol, 'prnt', 'centered', 'hdr', 'alt', alt_clr="rgb(50,50,50)", title=title, footer=dbug('here'))
+    """--== SEP_LINE ==--"""
+    my_d = {"col1": 1, "col2": 2, "col3": 3, "col4": 4, "col5": "col5 with a very very long winded line that has man many chacters in it. Do not be alarmed by it's length", "col6": ["This is six", "another line"], "col7": 7} 
+    colnames = ["col1", "col2", "col3", "col4", "col5", "col6"]
+    gtable(my_d, 'prnt', 'hdr', title="Simple Dictionary w/colnames and now with header and colnames", footer=dbug('here'), colnames=colnames)
+    print()
+    title = "with hdr and sortby=1"
+    gtable(my_lol, 'prnt', 'hdr', 'centered', sortby=1, title=title, footer=dbug('here'))
+    dbug('ask')
+    title = "with hdr and sortby=value"
+    gtable(my_lol, 'prnt', 'hdr', 'centered', sortby="value", title=title, footer=dbug('here'))
+    title = "with hdr and sortby_n=value"
+    gtable(my_lol, 'prnt', 'hdr', 'centered', sortbyn="value", title=title, footer=dbug('here'))
+    dbug('ask')
+    title = "with hdr and sortby_n=value filterby value: 2"
+    gtable(my_lol, 'prnt', 'hdr', 'centered', sortbyn="value", filterby={'value': '2'}, title=title, footer=dbug('here'))
+    title = "with hdr and sortby_n=value filterby value: 2 select_cols=[name, value, make]"
+    gtable(my_lol, 'prnt', 'hdr', 'centered', sortbyn="value", filterby={'value': '2'}, select=['name', 'value', 'make'], title=title, footer=dbug('here'))
+    dbug('ask')
+    gtable(my_lol, 'prnt', 'hdr', 'centered', 'end_hdr', sortbyn="value", filterby={'value': '2'}, select=['name', 'value', 'make'], title=title, footer="with end_hdr" + dbug('here'))
+
+    """--== SEP_LINE ==--"""
     printit(gtable.__doc__, 'boxed', 'centered', title=" gtable() doc ", footer=dbug('here'), box_color="yellow! on black!")
     askYN("Continue: ", 'centered')
     csv_lines = """
@@ -7803,6 +7870,7 @@ BAC,  34.03,  -1.11,  -3.16,  28.0,  11,  35.0,  92,  33.05,  20220727,  1,  P, 
     gtable(tst_d, 'prnt', 'header', 'index', 'alt', 'wrap', alt_color='on rgb(25,25,25)', title="Short title", footer=dbug('here'), end_hdr=True, col_limit=30)
     print()
     dbug('ask', 'centered')
+    """--== SEP_LINE ==--"""
     tst_d = {"first": ['pupose: re-writes a file with an added line (after or before a pattern) or replace a line, or append a line', '-    I wrote this because I am constantly building csv files with a header line '], "one": 1, "two": [2, 2], "three": 3, "four": ['pupose: re-writes a file with an added line (after or before a pattern) or   replace a line, or append a line', '-    I wrote this because I am constantly building csv files with a header line ']}
     gtable(tst_d, 'prnt', 'centered' 'wrap', footer=dbug('here'))
     tst_d = {'add_content': ['pupose: re-writes a file with an added line (after or before a pattern) or replace a line, or append a line', '-    I wrote this because I a  m constantly building csv files with a header line '], "next": 4}
@@ -7820,26 +7888,6 @@ BAC,  34.03,  -1.11,  -3.16,  28.0,  11,  35.0,  92,  33.05,  20220727,  1,  P, 
     # nums = [1, 20, 40, 3, 33, 55, 11, "21"]
     # dbug(nums)
     # dbug(sorted(nums, key=lambda x: float(x)))
-    my_lol = [["name", "value", "make", "model"], ["two", "2", "foo", "bar"], ["twenty_two", "22", "bing", "bang"], 
-            ["one", "1", "boom", "bam"], ["five", "5", "tik", "tok"], ["three", "3", "string", "strum"], ["four", "4", "ping", "pong"]]
-    title = "with hdr and alt"
-    gtable(my_lol, 'prnt', 'centered', 'hdr', 'alt', alt_clr="rgb(50,50,50)", title=title, footer=dbug('here'))
-    gtable(my_d, 'prnt', 'hdr', title="Simple Dictionary w/colnames and now with header and colnames", footer=dbug('here'), colnames=colnames)
-    print()
-    title = "with hdr and sortby=1"
-    gtable(my_lol, 'prnt', 'hdr', 'centered', sortby=1, title=title, footer=dbug('here'))
-    dbug('ask')
-    title = "with hdr and sortby=value"
-    gtable(my_lol, 'prnt', 'hdr', 'centered', sortby="value", title=title, footer=dbug('here'))
-    title = "with hdr and sortby_n=value"
-    gtable(my_lol, 'prnt', 'hdr', 'centered', sortbyn="value", title=title, footer=dbug('here'))
-    dbug('ask')
-    title = "with hdr and sortby_n=value filterby value: 2"
-    gtable(my_lol, 'prnt', 'hdr', 'centered', sortbyn="value", filterby={'value': '2'}, title=title, footer=dbug('here'))
-    title = "with hdr and sortby_n=value filterby value: 2 select_cols=[name, value, make]"
-    gtable(my_lol, 'prnt', 'hdr', 'centered', sortbyn="value", filterby={'value': '2'}, select=['name', 'value', 'make'], title=title, footer=dbug('here'))
-    dbug('ask')
-    gtable(my_lol, 'prnt', 'hdr', 'centered', 'end_hdr', sortbyn="value", filterby={'value': '2'}, select=['name', 'value', 'make'], title=title, footer="with end_hdr" + dbug('here'))
     """--== SEP_LINE ==--"""
     import pandas as pd
     my_df = pd.DataFrame(my_lol)
@@ -7891,7 +7939,6 @@ BAC,  34.03,  -1.11,  -3.16,  28.0,  11,  35.0,  92,  33.05,  20220727,  1,  P, 
     my_d = {"one": 1, "two": 2, "three": 3, "four": 4, "One thousand": 1000, "One million": 1000000}
     kv_cols(my_d, 2, 'prnt', 'centered', title="kv_cols(my_dictionary, cols=2)", footer=dbug('here'))
     kv_cols(my_d, 2, 'prnt', 'centered', 'boxed', box_color="red!", mstr_box_clr="yellow!", title="kv_cols(my_dictionary, cols=2) boxed", footer=dbug('here'))
-    """--== SEP_LINE ==--"""
     # ### EOB def gtable_demo(): ### #
     
 
@@ -8079,7 +8126,7 @@ def do_func_docs():
         gtable(doc_d, 'prnt', 'wrap', 'hdr', 'center', col_limit=120, colnames="firstrow")
 
 
-def chk_substr(chk_l, sub_strgs_l, action='exclude'):
+def chk_substr(chk_l, strgs_l, action='exclude'):
     """
     purpose: given a list of strings to check (chk_l) and a list of substrings to compare
             if any "compare" substring is in any string in check list of strings then 
@@ -8087,13 +8134,13 @@ def chk_substr(chk_l, sub_strgs_l, action='exclude'):
     return: new_list
     """
     new_l = []
-    for string in chk_l:
-        if any(substring in string for substring in sub_strgs_l):
+    for string_s in chk_l:
+        if any(sub_s in string_s for sub_s in strgs_l):
             if action == 'include':
-                new_l.append(string)
+                new_l.append(string_s)
         else:
             if action == 'exclude':
-                new_l.append(string)
+                new_l.append(string_s)
     return new_l
 
 
@@ -8125,6 +8172,45 @@ def do_func_demos():
         printit(demo_code, 'boxed', 'centered', box_color='yellow!', title=f"Code for this demo: {ans}", footer=dbug('here'))
 
 
+def gcontains(string_s, pattern_m):
+    if not isinstance(pattern_m, list):
+        pattern_l = [pattern_m]
+    else:
+        pattern_l = pattern_m
+    for pat in pattern_l:
+        if pat in string_s:
+            # dbug(f"Found pat: {pat} in string_s: {string_s} returning True")
+            return True
+    return False
+
+
+def get_mod_docs(mod="gtools", fn="*"):
+    """--== SEP_LINE ==--"""
+    import inspect
+    from inspect import getmembers, isfunction
+    from gtools import wrapit, chk_substr, boxed
+    md = __import__(mod)
+    funcs = [f for _, f in getmembers(md, isfunction) if f.__module__ == md.__name__]
+    excludes = ['_demo']
+    funcs = [f_o for f_o in funcs if not gcontains(f_o.__name__, excludes)]
+    for f_o in funcs:
+        # printit("Function: " + f_o.__name__, 'centered')
+        try:
+            name = f_o.__name__
+            diff = 20 - len(name)
+            name = name + ":" + " "*diff
+            box1 = [name]
+            doc = f_o.__doc__
+            doc_l = doc.split("\n")
+            doc_l = [ln.strip() for ln in doc_l if ln.strip() != '']
+            box2 = boxed(doc_l)
+            lines = gcolumnize([box1, box2])
+            lines = [escape_ansi(l) for l in lines]
+            printit(lines)
+        except Exception as e:
+            dbug(f"func: {name}  e: {e}")
+
+
 # ##### Main Code #######
 def main(args):  # ######
     # ###################
@@ -8139,11 +8225,25 @@ def main(args):  # ######
     printit(credits_caveats, 'centered', 'boxed', box_color="blue on black!")
     ans = ""
     while ans not in ("q", "Q"):
-        ans = gselect(["Docs", "Demos"], 'centered', 'quit')
+        ans = gselect(["Docs", "Demos", "All_functions_w/docs"], 'centered', 'quit')
         if ans == "Docs":
             do_func_docs()
         if ans == "Demos":
             do_func_demos()
+        if ans == "All_functions_w/docs":
+            file = "./gtools-docs.txt"
+            if askYN(f"Do you want to save this info to file: {file}"):
+                if file_exists(file):
+                    os.remove(file)
+                    cat_file(file, 'prnt')
+                    dbug('file should be gone', 'ask')
+                transcript_start(file)
+                get_mod_docs("gtools", fn="*")
+                transcript_start
+                print()
+                sys.exit()
+            else:
+                get_mod_docs("gtools", fn="*")
     do_close(box_color="yellow! on black")
 
 
