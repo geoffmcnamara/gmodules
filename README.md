@@ -8,8 +8,10 @@ Tool File:
 
 * gtools.py a collection of many tools to help produce charts or tables from data
 
+This set of tools offers over 100 functions.
 
-Example of use in c:wode:
+
+Example of use in code:
 
 ```python
 from gtools import printit, dbug, funcname, docvars, gselect, quick-plot, gtable  # etc
