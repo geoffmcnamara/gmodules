@@ -493,35 +493,35 @@ class ThreadWithReturn(threading.Thread):
         return self._return
 
 
-# #############
-class DoMenu:
-    # #########
-    """
-    deprecated for gselect
-    NOTE: to test this: echo 1 | python3 -m doctest -v ./gtools.py
-    Use:
-    Make sure you have the functions called for:
-      do_item1() do_item2() do_item3() do_item4() etc
-    Note: this is a dictionary ... hence do_select({title: function})
-    # >>> main_menu = DoMenu("Main")
-    # >>> main_menu.add_selection({"item1":cls})
-    # >>> main_menu.do_select()  # doctest: +ELLIPSIS
-    # ============================================================
-    #                             Main
-    # ============================================================
-    #                            1 item1...
-    # ...
-    """
-    # #####################
-    def __init__(self, name):
-        self.name = name
-        # dbug(f"args:{self.args}")
-        self.selections = {}
-        self.choices = {}
-        self.length = 60
-        self.cls = False
-        self.center = True
-
+# # #############
+# class DoMenu:
+#     # #########
+#     """
+#     deprecated for gselect
+#     NOTE: to test this: echo 1 | python3 -m doctest -v ./gtools.py
+#     Use:
+#     Make sure you have the functions called for:
+#       do_item1() do_item2() do_item3() do_item4() etc
+#     Note: this is a dictionary ... hence do_select({title: function})
+#     # >>> main_menu = DoMenu("Main")
+#     # >>> main_menu.add_selection({"item1":cls})
+#     # >>> main_menu.do_select()  # doctest: +ELLIPSIS
+#     # ============================================================
+#     #                             Main
+#     # ============================================================
+#     #                            1 item1...
+#     # ...
+#     """
+#     # #####################
+#     def __init__(self, name):
+#         self.name = name
+#         # dbug(f"args:{self.args}")
+#         self.selections = {}
+#         self.choices = {}
+#         self.length = 60
+#         self.cls = False
+#         self.center = True
+# 
     def add_selection(self, selection):
         """
         selection needs to be a dictionary element ie:
@@ -661,6 +661,7 @@ def dbug(xvar="", *args, exit=False, ask=False, prnt=True, **kwargs):
     ask_b = bool_val('ask', args, kwargs, dflt=False)
     lineno_b = bool_val(['lineno_b', 'lineno', 'line_no', 'line_number'], args, kwargs, dflt=False)
     here_b = bool_val('here', args, kwargs, dflt=False)
+    # ddbug(f"xvar: {xvar}")
     if str(xvar) == 'lineno':
         lineno_b = True
     if str(xvar) == 'here':
@@ -3893,320 +3894,6 @@ class MenuBox:
         return ans
 
 
-# # ##########################################################
-# def do_menu(my_list, *args, box=True, title=" Menu ", footer="", center=True, color="", tst=False, dflt="q", shadow=False, width=0, box_color="", **kvargs):
-#     # ######################################################
-#     """
-#     deprecated: 
-#     select from any list
-#     USE:
-#     selections_l = lst = ["one", "two", "three", "four", "five"]
-#     # or
-#     selections_d = {"Function One": func1(), "Function Two": func2()}
-#     # selection =  do_menu(lst)
-#     s = ""
-#     while 1:
-#         s = do_menu(lst)
-#         # dbug(s)
-#         if s in ["q", "Q", ""]:
-#             break
-#         cmd = selections_d[s]
-#         # dbug(cmd)
-#         out = os.popen(cmd).read()
-#         cls()
-#         printit(out)
-#         askYN()
-#     #
-#     TODO: add dflt="" option
-#       and friendly to list or dict
-#       if dict return value
-#       if list (current behaviour) return element
-#     >>> lst = ['one', 'two', 'three']
-#     >>> r = select_from(lst, tst=True, width=20)
-#     +--------------+
-#     |   1.) one    |
-#     |   2.) two    |
-#     |   3.) three  |
-#     +--------------+
-#     >>> print(f"{r}")
-#     (3, 'three')
-#     
-#     """
-#     dbug("...is this still used? ...")
-#     # dbug(dflt)
-#     # dbug(f"my_list: {my_list}",ask=True)
-#     my_d = my_list
-#     if isinstance(my_list, dict):
-#         my_list = list(my_d.keys())
-#         # dbug(my_d)
-#         # dbug(my_list)
-#     if center == "":
-#         center = 0
-#     if box:
-#         msgs = []
-#         # width = 80
-#         msgs = my_list
-#         if len(msgs) == 0:
-#             dbug("msg appears empty")
-#             return
-#         if width > 1:
-#             # dbug(my_list)
-#             # dbug(width)
-#             my_list = [f"{n + 1:>2}) {elem}" for n, elem in enumerate(my_list)]
-#             # names_l = columnize.columnize(my_list, displaywidth=width)
-#             names_l = gcolumnize(my_list, width=width)
-#             # dbug(my_list)
-#             # print(lines)
-#         else:
-#             # names_d = {}
-#             names_l = []
-#             # cnt = 0
-#             for n, msg in enumerate(msgs):
-#                 n = n + 1
-#                 if isnumber(dflt) and n == int(dflt):
-#                     names_l.append(f"[{n}]. {msg}")
-#                 else:
-#                     names_l.append(f"{n:>3}. {msg}")
-#             # names = list(enumerate(my_list, 1))
-#             # dbug(msgs)
-#             # dbug(names_l)
-#         lines = boxed(names_l, title=title, footer=footer, color=color, box_color=box_color, enter=center)
-#         if shadow:
-#             lines = shadowed(lines, color='grey', style=4)
-#         # if center:
-#         #     lines = centered(lines)
-#         printit(lines, center=center)
-#     if tst:  # here only for doctest
-#         choice = 1
-#     else:
-#         prompt = "Please enter your choice: [q=quit] "
-#         # pad_left = ""
-#         if center:
-#             choice = cinput(prompt)
-#         else:
-#             choice = input(prompt)
-#     # choice = str(choice)
-#     # dbug(f"choice: [{choice}]")
-#     # dbug(f"dflt: [{dflt}]")
-#     if choice == "":
-#         # dbug(f"choice: [{choice}]")
-#         # dbug(f"dflt: [{dflt}]")
-#         if dflt != "q" and isinstance(dflt, str):
-#             return dflt
-#         if dflt == "q":
-#             sys.exit()
-#         choice = dflt
-#         # dbug(choice)
-#         # dbug(msgs)
-#         selected = msgs[int(choice) - 1]
-#         return selected
-#     if str(choice).lower() == "q" or str(choice).lower() == "quit":
-#         printit("Exiting as requested...", center=center, shadow=shadow)
-#         sys.exit()
-#         # return "q"
-#     # dbug(msgs)
-#     # dbug(dflt)
-#     if is_number(choice):
-#         # dbug(choice)
-#         # if isinstance(my_list, dict):
-#         if isinstance(my_d, dict):
-#             # dbug(msgs)
-#             # dbug(choice)
-#             # msgs = list(msgs)
-#             selected = msgs[int(choice) - 1]  # this and the next are needed
-#             selected = my_d[selected]
-#         else:
-#             selected = msgs[int(choice) - 1]
-#         # selected = msgs[int(choice) - 1]
-#         # dbug(selected)
-#         return selected
-#     else:
-#         return choice
-#     # ### EOB def do_menu(my_list, box=True, title=" Menu ", footer="", center=True, color="", tst=False, dflt="q"): ### #
-# 
-
-# # ##################################
-# def doline(length=0, msg="nomsg", *args, **kvargs):
-#     # ##############################
-#     """
-#     WIP  this is to replace do_line within boxed() etc
-#     TODO: this all needs to be cleaned up or burned down :)
-#     line fmt will be:
-#         {lchrs}{lfill...}{msg}{rfill...}{rchrs} 
-#     possible kvargs:
-#         msg=""
-#         title=""  # same as msg except it gets box_color
-#         footer=""  # same as msg except it gets box_color
-#         color=""
-#         box_color=""
-#         center=False
-#         ljust=True
-#         rjust=False
-#         chr=lfill=rfill=fchr=hchr=""
-#         edge=echr=lchrs=rchrs=corner=""
-#     """
-#     dbug("deprecated: use gline() instead")
-#     # dbug(funcname())
-#     # dbug(f"length: {length} msg: {repr(msg)}")
-#     # dbug(args)
-#     # dbug(kvargs)
-#     """-== config ==--"""
-#     box_color = kvarg_val(['box_color', 'box_color'], kvargs, dflt="")
-#     color = kvarg_val(['color'], kvargs, dflt="")
-#     title = kvarg_val(["title"], kvargs, dflt="")
-#     footer = kvarg_val('footer', kvargs, dflt="")
-#     # echr = kvarg_val(["echr", 'edge', 'corner'], kvargs, dflt="")
-#     echrs = kvarg_val(["echrs"], kvargs, dflt=[])
-#     # chr = kvarg_val(["chr"], kvargs, dflt="")
-#     fchr = kvarg_val(["fchr", 'fill_chr', 'chr'], kvargs, dflt=" ")
-#     hchr = kvarg_val(["hchr", "hor_chr"], kvargs, dflt=" ")
-#     lchr = kvarg_val(["lchr", 'lchrs', 'echr'], kvargs, dflt="")
-#     rchr = kvarg_val(["rchr", 'rchrs', 'echr'], kvargs, dflt="")
-#     length = kvarg_val(["width", 'length'], kvargs, dflt=length)
-#     # dbug(f"lchr: {repr(lchr)} hchr: {repr(hchr)} rchr: {repr(rchr)} fchr: {repr(fchr)}")
-#     prnt = bool_val('prnt', args, dflt=False)
-#     if isinstance(length, int):
-#         length = length
-#     else:
-#         length = 60
-#     # dbug(length)
-#     prnt = kvarg_val('prnt', kvargs, dflt=False)
-#     msg = kvarg_val('msg', kvargs, dflt=msg)
-#     if msg == "nomsg":
-#         msg = "" * 40
-#     center = kvarg_val('center', kvargs, dflt=True)
-#     ljust = kvarg_val('ljust', kvargs, dflt=False)
-#     rjust = kvarg_val('rjust', kvargs, dflt=False)
-#     """--== Initialize ==--"""
-#     if echrs != []:
-#         lchr = echrs[0]
-#         rchr = echrs[1]
-#     color = sub_color(color)
-#     box_color = sub_color(box_color)
-#     reset = sub_color('reset')
-#     # dbug(reset)
-#     # dbug(repr(reset))
-#     msg_clr = lchr_clr = rchr_clr = lfill_clr = rfill_clr = color
-#     lchr_clr = rchr_clr = lfill_clr = rfill_clr = box_color
-#     if nclen(title) > 1:
-#         # msg = box_color + title
-#         msg = title
-#     if nclen(footer) > 1:
-#         # msg = sub_color(box_color) + footer
-#         msg = footer
-#     if hchr != "":
-#         lfill_chr = rfill_chr = fchr = hchr
-#     # dbug(f"lchr: {repr(lchr)} hchr: {repr(hchr)} rchr: {repr(rchr)} fchr: {repr(fchr)} lfill_chr: {lfill_chr} rfill_chr: {rfill_chr}")
-#     # dbug(repr(msg))
-#     msg_len = nclen(msg)
-#     lchr_len = nclen(lchr)
-#     rchr_len = nclen(rchr)
-#     fill_len = length - lchr_len - rchr_len
-#     lfill_len = 1  # we need at least one lfill_chr
-#     if center:
-#         lfill_len = ((fill_len - msg_len) // 2)
-#     if ljust:
-#         lfill_len = 0
-#     if rjust:
-#         lfill_len = fill_len
-#     lfill = lfill_chr * lfill_len
-#     rfill_len = fill_len - lfill_len - msg_len
-#     rfill = rfill_chr * rfill_len
-#     # dbug(f"length: {length} fill_len: {fill_len} lfill_len: {lfill_len} msg_len: {msg_len} rfill_len: {rfill_len} lfill_chr: {lfill_chr} rfill_chr: {rfill_chr}")
-#     # dbug(rfill_clr)
-#     # ruleit()
-#     if lfill.isspace():
-#         lfill_clr = color
-#     if rfill.isspace():
-#         rfill_clr = color
-#     # dbug(f"lchr: {repr(lchr)} rchr: {repr(rchr)}")
-#     if lchr_clr != "" or rchr_clr != "" or msg_clr != "" or lfill_clr != "" or rfill_clr != "":
-#         line = f"{reset}{lchr_clr}{lchr}{reset}{lfill_clr}{lfill}{reset}{msg_clr}{msg}{reset}{rfill_clr}{rfill}{reset}{rchr_clr}{rchr}{reset}"
-#     else:
-#         line = f"{reset}{lchr_clr}{lchr}{reset}{lfill_clr}{lfill}{reset}{msg_clr}{msg}{reset}{rfill_clr}{rfill}{reset}{rchr_clr}{rchr}{reset}"
-#     if prnt:
-#         printit(line)
-#     return line
-#     # ### EOB def doline(length, **kvargs): ### #
-# 
-
-# ##################################
-def do_title_three_line(msg, *args, hchr="=", length=120, color="", box_color="", prnt=True, center=False, **kvargs):
-    # ##############################
-    """
-    This is deprecated and will be removed
-    Use: do_title_three_line(msg,length=120)
-    This should probably be made into a class and combined with do_title
-    # >>> do_title_three_line("mytitle",30)
-    ==============================
-               mytitle
-    ==============================
-    ['==============================',
-     '           mytitle',
-     '==============================']
-    """
-    dbug("deprecated?")
-    # dbug(funcname())
-    # dbug(hchr)
-    # dbug(kvargs)
-    if 'centered' in args:
-        center = True
-    # dbug(f"{color}color {box_color}box_color")
-    # color = sub_color(color)
-    # box_color = sub_color(box_color)
-    # reset = ""
-    # if color != "":
-    #     reset = sub_color('reset')
-    # dbug(f"{color}color {box_color}box_color")
-    lines = []
-    # new_lines = []
-    # dbug(length)
-    # dbug(len(msg))
-    # dbug(f"length: {length} fchr-hchr: {hchr} color: {color} box_color: {box_color}")
-    top_bottom_line = doline(msg="", length=length, fchr=hchr, tst="This is a test", color=color, box_color=box_color, prnt=False)
-    lines.append(top_bottom_line)
-    line = doline(length, msg, color=color, box_color=box_color)
-    lines.append(line)
-    lines.append(top_bottom_line)
-    # if center:
-    #     columns = get_columns()
-    # for line in lines:
-    #     new_lines.append(line)
-    if prnt:
-        printit(lines, center=center)
-    return lines
-    # ### def do_title_three_line(msg, *args, hchr="=", length=120, color="", box_color="", prnt=True, center=False, **kvargs): ### #
-
-
-# ##################
-def do_title(title="", hchr="=", length=120, color="", one_three_line=1, prnt=False, center=True, edge="=", **kvargs):
-    # ##############
-    """
-    deprecated and will be removed
-    20210208-1203 significant refactoring done
-    A quick-n-dirty utility to print out a title line using
-    title = as the title string
-    c = as the repeated character
-    length defaults to 120
-    color defaults to ""
-    do_title(title, hchr, length, color)
-    # >>> do_title("mytitle","-",40,color="")
-    --------------- mytitle ----------------
-    '--------------- mytitle ----------------'
-    """
-    dbug("deprecated?")
-    # dbug(color)
-    box_color = color
-    if 'box_color' in kvargs:
-        box_color = kvargs['box_color']
-    # dbug(box_color)
-    line = doline(length, msg=title, hchr=hchr, edge=edge, center=center, prnt=prnt, box_color=box_color)
-    # dbug(line)
-    return line
-    # ### EOB def do_title(title="", hchr="=", length=120, color="", one_three_line=1, prnt=True, center=False, hchr="=", edge="=",): ### #
-
-
-
 def isnumber(x):
     """
     purpose: determines if x is a number even if it is a percent, or negative, or is 2k or 4b or 10M etc
@@ -7399,15 +7086,28 @@ def quick_plot(data, *args, **kwargs):
     """
     purpose: quick display of data in  a file or in dataframe
         displays a plot on a web browser if requested
-    args: data: df | str(filename: csv or dat)
-    options: show: bool, choose: bool, footer: str, footer: str tail: int (for the last n rows of the df)
-        choose invokes gselect multi mode to allow selections of columns to display in the plot (graph)
-        tail, title and footer only affect the gtable if show is True
-        - dat: bool | str      # I sometimes use a commented firstline for headers - 
-                               # using 'dat' declares this to be true, if character is used ie dat=":" 
-                               # then that will be used as the delimiter
+    required: data: df | str | list (filename: csv or dat filename)
+    options: 
+        - show | prnt: bool 
+        - centered: bool
+        - title: str 
+        - footer: str 
+        - tail: int          # for the last n rows of the df default=35
+        - choose: bool       # invokes gselect multi mode to allo"w selections of columns to display in the plot (graph)
+        - selections: list   # you can declare what columns to plot
+        - web: bool          # displays to your browser instead of a plot figure
+        - dat: bool | str    # I sometimes use a commented firstline for headers - 
+                             # using 'dat' declares this to be true, if character is used ie dat=":" 
+                             # then that will be used as the delimiter
+        - type: str          # default=line, bar, barh, hist, box, kde, density, area, pie, scatter, hexbin
+        - colnames: list | str     # default = [] if it is a str="firstrow" then the firstrow obviously will be treated as colnames
+        - mavgs: bool        # 50 day and 200 day moving averages added to plot
+        - box_text: str | list # string or lines to add to a box in fuger default=""
+        - subplot: str       # sub plot with area under filled using column name = subplot
+        - save_file: str     # name of file to save the plot figure to default=""
     returns: df
     NOTE: if a filename is used as data it will get "purified" by removing all comments first (except the first line of a dat file.)
+        tail, title and footer only affect the gtable if show is True
     """
     """--== debugging ==--"""
     # dbug(funcname())
@@ -7424,16 +7124,29 @@ def quick_plot(data, *args, **kwargs):
     """--== Config ==--"""
     show = bool_val(["prnt", "print", "show"], args, kwargs, dflt=False)
     choose = bool_val(["choose", "multi"], args, kwargs, dflt=False)
+    selections = kvarg_val(["selections", "select", "choices", "selected"], kwargs, dflt=[])
+    # dbug(selections)
     title = kvarg_val("title", kwargs, dflt="")
     footer = kvarg_val("footer", kwargs, dflt="")
     tail = kvarg_val("tail", kwargs, dflt=35)
     centered = bool_val(["centered", "center"], args, kwargs, dflt=True)
     web_b = bool_val(['web', 'browser'], args, kwargs, dflt=False)
     colnames = kvarg_val(['colnames', 'col_names', 'columns'], kwargs, dflt=[])
-    kind = kvarg_val(['kind', 'type', 'style'], kwargs, dflt='line')  # line, bar, barh, hist, box, kde, density, area, pie, scatter, hexbin
+    # kind = kvarg_val(['kind', 'type', 'style'], kwargs, dflt='line')  # line, bar, barh, hist, box, kde, density, area, pie, scatter, hexbin
     dat = kvarg_val(["dat"], kwargs, dflt=False)
     dat = bool_val(["dat"], args, kwargs, dflt=dat)  # this needs to be here in combination w/above
+    mavgs = bool_val(["mavgs", "mavg", "moving_avgs"], args, kwargs, dflt=False)
+    box_text = kvarg_val(["box_text", 'box_txt', "text", "txt"], kwargs, dflt="")
+    # dbug(box_text)
+    savefile = kvarg_val(["save", "savefile", "save_file"], kwargs, dflt="")
+    # dbug(savefile)
+    hline = kvarg_val(["trgt", "target", 'strike', "line", "hline"], kwargs, dflt=0)
+    subplot = kvarg_val(["subplot", "sub_plot", "sub"], kwargs, dflt="")
+    pb_lines = bool_val(["pb_lines", "pblines", "pullback_lines"], args, kwargs, dflt=False)
     # dbug(colnames)
+    """--== Inits ==--"""
+    selections_l = []
+    hline_name = "HLine"
     """--== Convert to df ==--"""
     if isinstance(data, pd.DataFrame):
         df = data
@@ -7453,12 +7166,15 @@ def quick_plot(data, *args, **kwargs):
     if isinstance(data, list):
         # dbug(data)
         if isinstance(data[0], list):
-            if len(data[0]) == 1:
-                # this is a lol so... 
-                data = [[n, elem] for n, elem in enumerate(data)]
-                # dbug(data)
-            df = pd.DataFrame(data)
-            # dbug(f"df): {df}")
+            # data must be a list of lists``
+            # dbug(data[0])
+            # this is an lol so... 
+            if colnames in ('firstrow', 'first_row', 'firstline', 'first_line'):
+                colnames = data[0]
+                data = data[1:]
+            # dbug(colnames)
+            # data = [[n, elem] for n, elem in enumerate(data)]  # this would add indexing
+            # dbug(data)
         else:
             # dbug(data)
             new_data_lol = []
@@ -7466,14 +7182,16 @@ def quick_plot(data, *args, **kwargs):
                 new_data_lol.append([n, item])
             data = new_data_lol
             # dbug(data)
-            df = pd.DataFrame(data)
-        src = "df"
-    # dbug(df)
+        df = pd.DataFrame(data)
+        if colnames != []:
+            df.columns = colnames
+        src = "list"
     if show:
-        footer += f" Source: {src} "
+        footer = f"{footer} Source: {src} "
         # dbug(type(df))
         # dbug(df)
-        gtable(df.tail(int(tail)), 'hdr', 'centered', 'prnt', title=title, footer=footer, centered=centered)
+        df = df.round(3)  # TODO make this a config option??
+        gtable(df.tail(int(tail)), 'hdr', 'indexes', 'centered', 'prnt', title=title, footer=footer + dbug('here'), centered=centered)
     if colnames != []:
         # dbug(colnames)
         if len(colnames) != len(df.columns):
@@ -7483,30 +7201,66 @@ def quick_plot(data, *args, **kwargs):
             df.columns = colnames
     colnames = df.columns.to_list()
     # dbug(type(colnames))
-    # dbug(colnames)
-    # choices_l = colnames[1:].tolist()
     choices_l = colnames[1:]
+    if selections != []:
+        if isinstance(selections, str):
+            selections = [selections]
+        selections_l = selections
+        # dbug(f"selecteions: {selections} selections_l: {selections_l}")
+    else:
+        # dbug(colnames)
+        selections_l = colnames[1:]
+    # dbug(selections_l)
     if choose:
         selections_l = gselect(choices_l, centered=centered, width=140, title=title, prompt="Add the desired column", quit=True, multi=True)
         # dbug(selections_l)
-    else:
-        selections_l = choices_l
-    if selections_l == []:
-        selections_l = df.columns.to_list()
+    # dbug(selections_l)
     # dbug(f"colnames: {colnames}")
     # dbug(type(df))
     # dbug(df)
     # dbug(df.dtypes)
     # dbug(df.info)
+    if selections_l == []:
+        selections_l = colnames
+    if mavgs:
+        # dbug(f"selections_l: {selections_l}")
+        df["50ma"] = df[selections_l[0]].rolling(window=50, min_periods=0).mean()
+        df["200ma"] = df[selections_l[0]].rolling(window=200, min_periods=0).mean()
+        selections_l.append("50ma")
+        selections_l.append("200ma")
+        df.dropna(inplace=True)
+        # last_50ma = round(df["50ma"].iloc[-1], 2)
+        # last_200ma = round(df["200ma"].iloc[-1])
+    # dbug(hline)
+    if isinstance(hline, dict):
+        # dbug(hline)
+        hline_name = list(hline.keys())[0]
+        hline = list(hline.values())[0]
+        # dbug(hline_name)
+        # dbug(hline)
+        # dbug(type(hline))
+    if float(hline) > 0:
+        # dbug(len(df))
+        hline_col = []
+        for x in range(len(df)):
+            hline_col.append(hline)
+        df[hline_name] = hline_col
+        selections_l.append(hline_name)
+    """--== SEP_LINE ==--"""
+    # dbug(df)
+    # dbug(selections_l, 'ask')
+    # gtable(df, 'prnt', 'hdr', footer=dbug('here'))  # debugging only
     if web_b:
         """--== for browser display ==--"""
         fig = px.line(df, x=colnames[0], y=selections_l, title=title)
         fig.show()
     else:
         if "date" in str(colnames[0]).lower() or "time" in str(colnames[0]).lower():
+            # dbug(colnames)
             my_df = df.set_index(colnames[0])
-        # else:
-            # dbug(colnames[0])
+        else:
+            # dbug(df)
+            my_df = df
         for col in colnames[1:]:
             my_df[col] = my_df[col].astype(float)
         # dbug(footer)
@@ -7514,8 +7268,64 @@ def quick_plot(data, *args, **kwargs):
         # dbug(colnames)
         # dbug(selections_l)
         # dbug(df)
-        ax = my_df.plot(figsize=(15, 5), kind=kind, xlabel=colnames[0] + "\n" + footer, y=selections_l, title=title)
-        ax.plot()
+        # dbug(selections_l)
+        pri_max = round(df[selections_l[0]].max(), 2)
+        pri_min = round(df[selections_l[0]].min(), 2)
+        footer += f"\nMin-Max: {pri_min}-{pri_max}" 
+        # grid = (5, 4)
+        grid = (6, 1)  # aka shape
+        # fig = plt.figure(figsize=(15, 6))
+        top_loc = (0, 0)
+        bot_loc = (5, 0)
+        """--== SEP_LINE ==--"""
+        top_plt = plt.subplot2grid(grid, top_loc, rowspan=5, colspan=1)
+        top_plt.plot(df[selections_l], label=selections_l)
+        top_plt.legend(loc="upper right")
+        top_plt.set_title(title)
+        plt.title(title)
+        """--== SEP_LINE ==--"""
+        if box_text != "":
+            if isinstance(box_text, list):
+                box_text = "\n".join(box_text)
+            props = dict(boxstyle='round', facecolor='wheat', alpha=1.0)
+            top_plt.text(0.01, 0.97, box_text, transform=top_plt.transAxes, fontsize=10,
+                verticalalignment='top', bbox=props)
+            top_plt.legend(loc='upper right')
+        """--== SEP_LINE ==--"""
+        if subplot != "":
+            bot_plt = plt.subplot2grid(grid, bot_loc, rowspan=1, colspan=1)
+            bot_plt.fill_between(df.index, df[subplot], label=subplot, color="blue", facecolor='grey')
+            bot_plt.legend(loc="upper right")
+            # plt.subplots_adjust(hspace=1)
+        """--== SEP_LINE ==--"""
+        if pb_lines:
+            # indx_len = len(df.index)
+            # x_val = df.index[int(0.03*indx_len)]
+            x_val = df.index[0]
+            # dbug(x_val)
+            correction = round(0.9 * float(pri_max), 2)
+            dbug(correction)
+            top_plt.axhline(y=correction, color='cyan', linestyle="--", label="correction")
+            top_plt.text(x_val, correction, "Correction", va='center', ha='center', backgroundcolor='w')
+            bear = 0.8 * pri_max
+            top_plt.axhline(y=bear, color='cyan', linestyle="-.")
+            top_plt.text(x_val, bear, "Bear", va='center', ha='center', backgroundcolor='w')
+            superbear = 0.7 * pri_max
+            top_plt.axhline(y=superbear, color='cyan', linestyle="-.")
+            top_plt.text(x_val, superbear, "SuperBear", va='center', ha='center', backgroundcolor='w')
+            ultrabear = 0.6 * pri_max
+            top_plt.axhline(y=ultrabear, color='cyan', linestyle="-.")
+            top_plt.text(x_val, ultrabear, "UltraBear", va='center', ha='center', backgroundcolor='w')
+        """--== SEP_LINE ==--"""
+        footer = "\n" + footer
+        plt.figtext(0.5, 0.01, footer, ha='center', fontsize=11)
+        plt.gcf().set_size_inches(15, 5)
+        """--== SEP_LINE ==--"""
+        if savefile != "":
+            # NOTE!!!! this has to be called BEFORE plt.show !!!! NOTE #
+            # dbug(savefile)
+            plt.savefig(f"{savefile}")
+        """--== SEP_LINE ==--"""
         plt.show()
     # dbug(f"Returning df: {df}")
     return df
@@ -7523,6 +7333,18 @@ def quick_plot(data, *args, **kwargs):
 
 
 def quick_plot_demo():
+    try:
+        sym = "BAC"
+        trgt = 27
+        import yfinance as yf
+        sym_o = yf.Ticker(sym)
+        hx = sym_o.history(start="2020-01-01", end="2022-09-04")
+        title = f"History of sym: {sym}"
+        quick_plot(hx, 'prnt', 'mavgs', title=title, footer=dbug('here'), selections=["Close"], hline={"Target": trgt}, subplot="Volume", text="Text should\ngo here")
+        dbug('ask')
+    except:
+        pass
+        return
     import random
     lst_len = 2000
     sums = []
@@ -7543,6 +7365,16 @@ def quick_plot_demo():
     kinds = ['line', 'bar', 'barh', 'area']
     for kind in kinds:
         quick_plot(df, 'show', kind=kind, colnames=["Sum"], title=f"Demo of Frequency of Sum (2) dice kind: {kind}", footer=f"kind: {kind} {dbug('here')}")
+    """--== SEP_LINE ==--"""
+    my_lol = [['date', 'tempC', "tempF"], ['2020-01-01', 40.0, 104.0], ["2020-04-01", 36.0, 96.8], ["2021-01-01", 24.2, 75.56], 
+            ["2021-09-01", 22, 71.6], ["2021-10-01", 21, 69.8],["2022-01-01", 22.22, 72], ["2022-02-01", 20, 68], 
+            ["2022-03-01", 23, 73.4], ["2022-04-01", 31, 87.8], ["2022-05-01", 35, 95], ["2022-06-1", 36, 96.8], ["2022-06-10", 34, 93.2]]
+    # dbug(my_lol)
+    quick_plot(my_lol, colnames='firstrow', text="You can\nadd text\nif you\nwant", footer=dbug('here'))
+    """--== SEP_LINE ==--"""
+    quick_plot(my_lol, 'mavgs', colnames='firstrow', text="You can add\n moving averages\nby default 50 and 200 day", footer=dbug('here'))
+    """--== SEP_LINE ==--"""
+    dbug("Done")
     
 
 def boxed_demo():
@@ -7587,7 +7419,7 @@ def gtable_demo():
     box1 = gtable(tst_d, 'header', 'wrap', title="Short title w/wrap", footer=dbug('here'), end_hdr=True, col_limit=30)
     box2 = gtable(tst_d, 'header', 'index', 'alt', 'wrap', title="Short title w/wrap, alt, and w/index", footer=dbug('here'), end_hdr=True, col_limit=30)
     gcolumnize([box1, box2], 'prnt', 'centered', 'boxed', title="Two gtables boxed and centered", box_color="yellow! on black", footer=dbug('here'))
-    dbug('ask', 'centered')
+    # dbug('ask', 'centered')
     """--== SEP_LINE ==--"""
     my_lol = [["name", "value", "make", "model"], ["two", "2", "foo", "bar"], ["twenty_two", "22", "bing", "bang"], 
             ["one", "1", "boom", "bam"], ["five", "5", "tik", "tok"], ["three", "3", "string", "strum"], ["four", "4", "ping", "pong"]]
