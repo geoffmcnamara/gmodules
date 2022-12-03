@@ -15,7 +15,9 @@ Tool File:
   * tools to place shadows around boxes
   * tools for running shell commands with options to manipulate output
   * tools to pull data from files lines of output and build tables, lists of lists, or pandas, etc
-  * many other tools for manipulating text or data
+  * rudimentary progress bars or percentage bar
+  * spinners while others tasks are carried out
+  * other tools to manipulate text or data
 
 This set of tools offers over 100 functions.
 
