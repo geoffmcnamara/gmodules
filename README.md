@@ -21,6 +21,8 @@ Tool File:
 
 This set of tools offers over 100 functions.
 
+![gtools-demo](https://github/geoffmcnamara/gmodules/main/gtools-demo.gif)
+
 Example of use in code:
 
 ```python
