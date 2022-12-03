@@ -21,7 +21,7 @@ Tool File:
 
 This set of tools offers over 100 functions.
 
-![](https://github/geoffmcnamara/gmodules/blob/main/gtools-demo.gif)
+[](https://github/geoffmcnamara/gmodules/blob/main/gtools-demo.gif)
 
 Example of use in code:
 
