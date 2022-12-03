@@ -7,9 +7,17 @@ Simply run gtools.py to see some of the possible uses.
 Tool File:
 
 * gtools.py a collection of many tools to help produce charts or tables from data
+  * debugging tool
+  * tools for colorizing text of boxes or tables
+  * tools to tabulize data including pandas, list of lists, lists of dictionaries, csv files etc
+  * tools to put (colorized) boxes around text or lines of text
+  * tools to center output on the screen
+  * tools to place shadows around boxes
+  * tools for running shell commands with options to manipulate output
+  * tools to pull data from files lines of output and build tables, lists of lists, or pandas, etc
+  * many other tools for manipulating text or data
 
 This set of tools offers over 100 functions.
-
 
 Example of use in code:
 
