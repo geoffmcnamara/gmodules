@@ -5222,13 +5222,17 @@ def gtable(lol, *args, **kwargs):
 #     # XXX
     if isinstance(lol, list):
         if islod(lol):
-            dbug("This is a list of dictionaries", 'ask')
-            new_lol = []
+            # dbug("This is a list of dictionaries", 'ask')
+            new_lol = [list(lol[0].keys())]
+            # dbug(new_lol)
             for elem in lol:
                 row = []
-                for k, v in elem.items():
-                    row.append(v)
+                # for k, v in elem.items():
+                    # row.append(v)
+                row = list(elem.values())
                 new_lol.append(row)
+            # new_lol = [item for item in row if len(item) > 1]
+            # dbug(new_lol)
             lol = new_lol
         # dbug(lol[:2])
         # if isinstance(lol[0], str):
