@@ -17,6 +17,7 @@ Tool File:
   * tools to pull data from files lines of output and build tables, lists of lists, or pandas, etc
   * rudimentary progress bars or percentage bar
   * spinners while others tasks are carried out
+  * tools to read html tables and turn it into  colorfull ascii table with selected columns and/or filtered data
   * other tools to manipulate text or data
 
 This set of tools offers over 100 functions.
