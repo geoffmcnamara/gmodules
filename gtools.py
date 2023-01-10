@@ -5696,8 +5696,9 @@ def gtable(lol, *args, **kwargs):
                         # start adding multi_line rows...  this is a multi_line elem (it is of list type)
                         # this is a multi_line elem so use the first item in that elem and increment elem_line_num
                         # elem_num_lines[elem_num] = len(elem)
-                        # dbug(f"This is a multi_line elem as it is a list. elem: {elem}")
-                        new_elem = elem[add_row_num]
+                        # dbug(f"This is a multi_line elem as it is a list. elem: {elem} len(elem): {len(elem)} add_row_num: {add_row_num}")
+                        if add_row_num < len(elem):
+                            new_elem = elem[add_row_num]
                     else:
                         # elem is not multi_line (ie not a list)
                         if add_row_num > 0:
