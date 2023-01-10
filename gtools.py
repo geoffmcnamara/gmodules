@@ -84,7 +84,7 @@ class Spinner:
     # ########
     """
     purpose: prints a spinner in place
-    input: msg="": str style='bar': ellipsis, pipe, box, vbar, arrow, clock, bar, balloons, moon, dot, braille, pulse
+    input: msg="": str style='bar': ellipsis, pipe, box, vbar, growing_bar, missing_box, solid_box,  arrow, clock, bar, balloons, moon, dot, braille, pulse
         prog|progressive|progress: bool
         color: str
         txt_color: str
@@ -118,8 +118,8 @@ class Spinner:
         self.elapsed = bool_val(['elapsed', 'elapse', "time", "timed"], args, kwargs, dflt=False)
         # dbug(self.elapsed)
         time_color = kvarg_val(["time_color", 'time_clr', 'elapsed_clr', 'elapsed_time_clr', 'elapsed_color', 'elapse_color', 'elapse_clr'], kwargs, dflt=txt_color)
-        self.time_color = time_color
         # dbug(time_color)
+        self.time_color = time_color
         self.TIME_COLOR = sub_color(time_color)
         # self.elapsed_time = 0
         self.etime = bool_val(["etime", "show_elapsed", 'elpased_time', 'elapsed', 'time'], args, kwargs, dflt=False)
@@ -161,6 +161,9 @@ class Spinner:
         if style == 'vbar':
             spinner_chrs = ['_', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█', '▇', '▆', '▅', '▄', '▃', '▂', '▁', '_']
             self.style_len = len(spinner_chrs)
+        if style in ('growing_bar', 'pump'):
+            spinner_chrs = ['\u258F', '\u258E', '\u258D', '\u258C', '\u258B', '\u258A', '\u2589', '\u2588', '\u2589', '\u258A', '\u258B', '\u258C', '\u258D', '\u258E', '\u258F', ' ']
+            self.prog = False
         if style == 'bar':
             spinner_chrs = ['█', '█', '█', '█', '█']
             self.prog = True
@@ -171,8 +174,14 @@ class Spinner:
         if style == 'dot':
             spinner_chrs = ['⠁', '⠂', '⠄', '⡀', '⢀', '⠠', '⠐', '⠈']
             self.prog = False
-        if style == 'box':
+        if style == 'box' or style == 'boxes':
             spinner_chrs = ['◰', '◳', '◲', '◱']
+            self.prog = False
+        if style == 'solid_box' or style == 'solid_boxes':
+            spinner_chrs = ['\u2598', '\u259D', '\u2597', '\u2596']
+            self.prog = False
+        if style == 'missing_box' or style == 'hole_boxes':
+            spinner_chrs = ['\u259F', '\u2599', '\u259B', '\u259C']
             self.prog = False
         if style == 'balloons':
             spinner_chrs = ['.', 'o', 'O', '@', '*']
@@ -1510,9 +1519,10 @@ def bool_val(s, args_l, kvargs={}, **kwargs):
     """--== debugging ==--"""
     # dbug(funcname())
     # dbug(f"s: {s} args_l: {args_l} kvargs: {kvargs} kwargs: {kwargs}")
+    # Keep in mind kvargs are the kwargs that came from the calling function - not this functions kwargs!
     """--== Config ==--"""
     bool_v = kvarg_val(["default", "dflt"], kwargs, dflt=False)
-    # dbug(f"default for bool_v: {bool_v}")
+    # ddbug(f"default for bool_v: {bool_v}")
     opposite_words = kvarg_val(['opposite', 'opposites'], kwargs, dflt=[])
     """--== Convert ==--"""
     if isinstance(s, str):
@@ -1534,8 +1544,11 @@ def bool_val(s, args_l, kvargs={}, **kwargs):
         if s in args_l:
             bool_v = True
         if s in kvargs:
-            if isinstance(kvargs[s], bool):
-                bool_v = kvargs[s]
+            # ddbug(s)
+            # ddbug(kvargs[s])
+            # if isinstance(kvargs[s], bool):
+                # bool_v = kvargs[s]
+            bool_v = kvargs[s]
     opposite_b = False
     for word in opposite_words:
         # dbug(f"word: {word} opposite_words: {opposite_words} args_l: {args_l} kvargs: {kvargs}")
@@ -2467,19 +2480,15 @@ def cat_file(fname, *args, prnt=False, lst=False, **kwargs):
         # colnames = get_elems(lines[0], 'lst', delimiter=delimiter)
         # dbug(f"Calling get_elems")
         # dbug(delimiter)
-        if len(lines) > 1:
+        if len(lines) > 0:
             rows_lol = get_elems(lines, delimiter=delimiter)
         """--== fix numbers ==--"""
         new_rows = []
-        # dbug(rows_lol)
+        # dbug(rows_lol[:3])
         for row in rows_lol:
             new_row = []
-            # if "AVGO" in row:  # debugging
-                # dbug(row)
             for n, elem in enumerate(row):
                 elem = elem.strip()
-                # if "AVGO" in new_row and "209" in elem:  # debugging
-                    # dbug(elem, 'ask')
                 if n == 0:
                     new_row.append(elem)
                 else:
@@ -2624,8 +2633,14 @@ def purify_file(file, *args, **kwargs):
     purified_lines = []
     with open(file, "r") as myfile:
         for n, line in enumerate(myfile):
-            # if "AVGO" in line:  # debugging
-                # dbug(line)
+            if n == 0 and dat_b:
+                if line.startswith("#"):
+                    # dbug(line)
+                    line = re.sub("^#\s", "", line)
+                    line = line.rstrip('\n')
+                    # dbug(line)
+                purified_lines.append(line)
+                continue
             line = line.rstrip('\n')
             if n == 0:
                 line = line.lstrip("#")
@@ -2694,213 +2709,6 @@ def ireplace(s, indices=[], char="|"):
     return s
 
 
-# # ###############################
-# def do_kv_rows(d, length=0, prnt=False, color="", title="", edge="+", footer=""):
-#     # ###########################
-#     """
-#     deprecated, use kv_cols instead
-#     purpose:
-#         prints out boxed dictionary of key value pairs
-#     # >>> d = {"one": 1.00, "two": "2.000", "three": 3.00, "four is where the world changes for the better": "4.4444"}
-#     # >>> lines = do_kv_rows(d, length=21)
-#     """
-#     dbug("deprecated: use kv_cols() instead...")
-#     # dbug(d, ask=True)
-#     # dbug(type(d))
-#     # dbug(length)
-#     box_color = sub_color(color)
-#     if color == "":
-#         RESET = ""  # noqa:
-#     else:
-#         RESET = Style.RESET_ALL  # noqa:
-#     reset = RESET
-#     # dbug(f"{color} TEST {reset}")
-#     def pad(e1, e2, chr=" "):
-#         diff = len(str(e2)) - len(str(e1))
-#         # dbug(diff)
-#         if diff > 0:
-#             pad = diff * chr
-#             return pad
-#         return ""
-#     # try:
-#     #     rows, columns = os.popen("stty size", "r").read().split()  # noqa:
-#     # finally:
-#     #     rows = columns = 0
-#     lines = []
-#     # keys_line = "||"
-#     num_processed = 0
-#     k_rows = []
-#     v_rows = []
-#     # d_len = len(d)
-#     # for i in range(d_len):
-#     def get_len_k_row(d):
-#         k_row = f"{box_color}||{reset}"
-#         for k, v in d.items():
-#             add_this = f" {k} " + pad(k, v) + f"{box_color}|{reset}"
-#             k_row += add_this
-#         k_row += f"{box_color}|{reset}"
-#         line_len = nclen(k_row)
-#         # dbug(f"returning line_len: {line_len} k_row: {k_row}")
-#         return line_len
-#     def extend_row(k_row, v_row, length):
-#         # dbug(f"extend_row() length: {length} len(k_rows): {len(k_rows)} k_row: {k_rows}")
-#         # extend a row
-#         # do not add ending edge
-#         diff = length - nclen(k_row)
-#         padding = "-" * diff
-#         end_with = f"{padding}{box_color}|{reset}"
-#         k_row += end_with
-#         # dbug(k_row)
-#         if nclen(v_row) != nclen(k_row):
-#             diff = nclen(k_row) - nclen(v_row) - 1
-#             padding = "-" * diff
-#         end_with = f"{padding}{box_color}|{reset}"
-#         v_row += end_with
-#         return k_row, v_row
-#         #
-#     def do_kv_row(d, line_len):
-#         """
-#         returns: k_row, v_row, num_processed
-#         """
-#         # dbug(line_len)
-#         k_row = ""
-#         v_row = ""
-#         num_processed = 0
-#         if line_len < 1:
-#             dbug(f"line_len: {line_len} has to be greater than 0")
-#             return k_row, v_row, num_processed
-#         # dbug(d)
-#         k_row = f"{box_color}||{reset}"
-#         v_row = f"{box_color}||{reset}"
-#         for k, v in d.items():
-#             num_processed += 1
-#             add_this = f" {k} " + pad(k, v)
-#             tst_k_row = k_row + add_this
-#             if nclen(tst_k_row) > line_len:
-#                 # dbug(f"ooops tst_k_row: {tst_k_row}\nnclen(tst_k_row): {nclen(tst_k_row)} too long for line_len: {line_len}")
-#                 # dbug(f"Returning: k_row: {k_row}\nv_row: {v_row}")
-#                 # return k_row, v_row, num_processed - 1
-#                 num_processed -= 1
-#                 if num_processed < 1:
-#                     # dbug("Perhaps one key is too long... ")
-#                     return
-#                 # dbug(f"Breaking loop with: k_row: {k_row} nclen(k_row): {nclen(k_row)} line_len: {line_len}\nv_row: {v_row}")
-#                 break
-#             else:
-#                 # dbug(add_this)
-#                 k_row += add_this
-#                 # dbug(k_row)
-#                 v_row += f" {v} " + pad(v, k)  # " + f"{box_color}|{reset}"
-#             # extend if needed
-#             # k_row, v_row = extend_row(k_row, v_row, line_len)
-#             #
-#             padding = ""
-#             if len(k_rows) > 0:
-#                 # so we can use the first row
-#                 if nclen(k_row) < line_len:
-#                     # dbug(k_row)
-#                     # dbug(f"HERE WE ARE nclen(k_row): {nclen(k_row)} line_len: {line_len} len(k_rows): {len(k_rows)} nclen(k_rows[0]): {nclen(k_rows[0])}")
-#                     extend_by = line_len - nclen(k_row) - 7
-#                     # dbug(extend_by)
-#                     padding = " " * extend_by
-#             end_with = f"{padding}{box_color}|{reset}"
-#             k_row += end_with
-#             # dbug(k_row)
-#             if nclen(v_row) != nclen(k_row):
-#                 diff = nclen(k_row) - nclen(v_row) - 1
-#                 padding = " " * diff
-#             end_with = f"{padding}{box_color}|{reset}"
-#             v_row += end_with
-#         if nclen(k_row) > line_len + 4:
-#             dbug(f"""It looks like this last k_row: [{k_row}] is still too long nclen(k_row):
-#                     {nclen(k_row)} line_len: {line_len}... try a slightly larger length""")
-#             # dbug(k_row)
-#             sys.exit()
-#         # dbug(f"Returning: k_row: {k_row} nclen(k_row): {nclen(k_row)} line_len: {line_len}\nv_row: {v_row}")
-#         return k_row, v_row, num_processed
-#     """--== SEP LINE ==--"""
-#     def slice_d(d, start=0, end=0):
-#         if not isinstance(d, dict):
-#             dbug(d)
-#         # dbug(f"d: {d} start: {start} end: {end}")
-#         if end == 0:
-#             end = len(d)
-#         new_d = {}
-#         for n, (k, v) in enumerate(d.items()):
-#             if n >= start and n <= end:
-#                 # dbug(f"adding k: {k} v: {v}")
-#                 new_d[k] = v
-#         return new_d
-#     """--== SEP LINE ==--"""
-#     def assemble_table(k_rows, v_rows):
-#         lines = []
-#         line_len = nclen(k_rows[0])
-#         # top_line = "=" * line_len
-#         top_line = do_title(title=title, chr="=", length=line_len, prnt=False, box_color=box_color, edge=edge)
-#         # printit(top_line)
-#         # sep_row = f"{box_color}||" + "-" * (line_len - 4) + f"||{reset}"
-#         sep_line = "||" + "-" * (line_len - 4) + "||"
-#         # bot_line = f"{box_color}+" + "=" * (line_len - 2) + f"+{reset}"
-#         bot_line = do_title(title=footer, prnt=False, length=line_len, box_color=box_color, edge=edge)
-#         # printit(bot_line)
-#         lines.append(top_line)
-#         # printit(lines)
-#         # dbug(f"line_len: {line_len} len(k_rows): {len(k_rows)} len(v_rows): {len(v_rows)} lines: {lines}")
-#         # dbug(v_rows)
-#         for n, k_row in enumerate(k_rows):
-#             # dbug(n)
-#             # dbug(k_rows[n])
-#             lines.append(k_rows[n])
-#             chr = '|'
-#             iter = re.finditer(rf"\{chr}", escape_ansi(k_rows[n]))
-#             indices = [m.start(0) for m in iter]
-#             indices = indices[2:-2]
-#             sep_line = ireplace(sep_line, indices, char="|")
-#             lines.append(f"{box_color}{sep_line}{reset}")
-#             # dbug(f"just added sep_row: {sep_row}")
-#             # dbug(v_rows[n])
-#             lines.append(v_rows[n])
-#             if n < len(k_rows) - 1:
-#                 line = box_color + "||" + "=" * (line_len - 4) + "||" + reset
-#                 lines.append(line)
-#             # dbug(n)
-#         lines.append(bot_line)
-#         return lines
-#     line_len = get_len_k_row(d)
-#     # dbug(f"max_len: {max_len} line_len: {line_len}")
-#     if length > 0 and line_len > length:
-#         line_len = length
-#     # dbug(line_len)
-#     tst_len = nclen(title) + 6
-#     if nclen(footer) + 6 > tst_len:
-#         tst_len = nclen(footer) + 6
-#     if tst_len > line_len:
-#         line_len = tst_len
-#     # dbug(line_len)
-#     tot_processed = 0
-#     new_d = d
-#     n = 0
-#     # dbug(k_row_len)
-#     # dbug(line_len)
-#     while tot_processed < len(d):
-#         # dbug(f"Begining loop with new_d: {new_d} tot_processed: {tot_processed} line_len: {line_len}")
-#         k_row, v_row, num_processed = do_kv_row(new_d, line_len)
-#         # dbug(f"Just got back num_processed: k_row: {k_row} nclen(k_row): {nclen(k_row)} num_processed: {num_processed}")
-#         if nclen(k_row) > line_len + 2:
-#             dbug(f"nclen(k_row): {nclen(k_row)} is Too long for line_len: {line_len}... bailing...")
-#             sys.exit()
-#         tot_processed += num_processed
-#         # dbug(f"new_d: {new_d} num_processed: {num_processed} tot_processed: {tot_processed}\nNow running slice(d, tot_processed, len(d)) ")
-#         new_d = slice_d(d, tot_processed, len(d))
-#         # dbug(new_d)
-#         k_rows.append(k_row)
-#         v_rows.append(v_row)
-#         n += 1
-#     lines = assemble_table(k_rows, v_rows)
-#     if prnt:
-#         printit(lines)
-#     return lines
-#     # ### EOB def do_kv_rows(d, length=0, prnt=False, color="", title="", edge="+", footer=""):
 
 
 # ########################################
@@ -5192,7 +5000,7 @@ def gtable(lol, *args, **kwargs):
         - header: bool_val,  # header | hdr
         - colnames: list | str,  'firstrow' | 'firstline' | 'keys'
         - col_colors: list,   # gtable will use this list of colors to set each column, repeats if more cols than colors
-        - neg: bool_val,
+        - neg: bool | list,
         - nan: str,
         - alt: bool_val,
         - alt_color: str,
@@ -5201,11 +5009,14 @@ def gtable(lol, *args, **kwargs):
         - indexes: bool,
         - box_style: str,
         - max_col_len|col_limit|col_len...: int,  default=100
-        - human: bool,
-        - rnd: int,
+        - human: bool| list,   # if bool all numbers will get "humanized", if list syntax = [colname, colname...] and ony those colnames will get "humanized"
+        - rnd: int | dict,     # if int all numbers will be rounded to rnd value,  if dict syntax is {colname, round_val, colname, round_val}
+                                keep in mind if round_val = 0 it will turn that colname into all integers
+                                if round > 0 then all the column values will have that many decimal places
         - sortby: str,
-        - filterby: dict {'field': 'contains'}
-        - ci: bool             # will make filterby case insensitive
+        - filterby: dict {'field': 'pattern'}  Note: the default is to search the column for matches of rows where column contains pattern (see regex option)
+        - ci: bool             # will make filterby case insensitive default=False
+        - regex: bool          # will force filterby to use exact match to pattern
         - select_cols: list    # specify which columns to include - table will be in same order
         - excluded_cols: list  # specify which columns to exclude
         - write_csv: str,
@@ -5226,10 +5037,6 @@ def gtable(lol, *args, **kwargs):
     # dbug(args)
     # dbug(kwargs)
     # dbug(type(lol))
-    # if isinstance(lol, pandas.DataFrame):
-        # dbug(lol.head())
-    # if isinstance(lol, list):  # debugging
-        # dbug(lol[:5])
     # dbug(type(lol))
     """--== Config ==--"""
     color = kvarg_val('color', kwargs, dflt="")
@@ -5267,14 +5074,19 @@ def gtable(lol, *args, **kwargs):
     alt = bool_val('alt', args, kwargs, dflt=False)
     max_col_len = kvarg_val(['max_col', 'max_col_len', 'width', 'col_limit', 'max_limit', 'max_len', 'col_len'], kwargs, dflt=100)
     wrap_b = bool_val(["wrap", "wrapit"], args, kwargs, dflt=False)
-    neg = bool_val('neg', args, kwargs, dflt=False)
+    neg = bool_val('neg', args, kwargs, dflt=False)  # if a list is supplied here the syntax is [colname, colname, colanme...]
+    # dbug(neg)
     rnd = kvarg_val(['rnd', 'round'], kwargs, dflt="")
+    # dbug(rnd)
     human = bool_val(['h', 'human', "H"], args, kwargs, dflt=False)
-    nan = kvarg_val(['nan'], kwargs, dflt="")
+    # dbug(human)
+    # nan = kvarg_val(['nan'], kwargs, dflt="")
     sortby = kvarg_val(["sortby", "sort_by", "sorton", "sort_on", "sort", 'sorted_by', 'sortedby'], kwargs, dflt='')
     sortby_n = kvarg_val(["sortbyn", "sort_byn", "sortby_n", "sortby_n", "sort_n"], kwargs, dflt='')
-    filterby_d = kvarg_val(['filterby', 'filter_by'], kwargs, dflt={})
-    ci_b = bool_val(["case_insensitive", "ci"], args, kwargs, dflt=True)
+    filterby_d = kvarg_val(['filterby', 'filter_by'], kwargs, dflt={})  # column_to_search: pattern
+    # ci_b = bool_val(["case_insensitive", "ci"], args, kwargs, dflt=True)
+    ci_b = bool_val(["case_insensitive", "ci"], args, kwargs, dflt=False)
+    rgx_b = bool_val(["rgx", "regex", "exact"], args, kwargs, dflt=False)  # forces a regex search using supplied filterby pattern
     write_csv = kvarg_val(["write_csv", 'csv_file'], kwargs, dflt='')  # write a csv file with gtable data
     write_out = kvarg_val(["write_out", 'out_file'], kwargs, dflt='')  # write table out to file
     end_hdr = bool_val(['end_hdr', "endhdr", 'hdr_last'], args, kwargs, dflt=False)
@@ -5282,6 +5094,7 @@ def gtable(lol, *args, **kwargs):
     strip_b = bool_val(['strip'], args, kwargs, dflt=False)
     delimiter = kvarg_val(["delimiter", "delim"], kwargs, dflt=",")  # only needed if lol is a filename and not the default
     blanks = kvarg_val(["blank", "blanks"], kwargs, dflt="")
+    skip = bool_val(['skip'], args, kwargs, dflt=False)  # skip non-compliant lines/rows?
     """--== Validate ==--"""
     if not isinstance(selected_cols, list):
         dbug(f"selected_cols: {selected_cols} must be a list ... please investigate... returning...")
@@ -5306,7 +5119,6 @@ def gtable(lol, *args, **kwargs):
     max_elem_len = []  # init... will hold max len for each col
     # cell_pad = " "  # add before and after @ elem - this has to come after sub_color(color)
     max_width = 0
-    skip = bool_val(['skip'], args, kwargs, dflt=False)  # skip non-compliant lines/rows?
     """--== Imports ==--"""
     import pandas as pd
     import numpy as np
@@ -5321,9 +5133,9 @@ def gtable(lol, *args, **kwargs):
         # dbug(type(indexname))
         # dbug(indexname)
         # dbug(selected_cols)
-        res = list(filter(lambda x: indexname in x, selected_cols))
-        if len(res) != 0:
-            df = df.reset_index()
+        # res = list(filter(lambda x: indexname in x, selected_cols))
+        # if len(res) != 0:
+            # df = df.reset_index()
         if isinstance(colnames, str) and colnames in ("firstrow", "firstline", "first_row", "first_line"):
             df, df.columns = df[1:], df.iloc[0]  # uses the first row as colnames and uses the rest of the rows for the df
             colnames = list(df.columns)
@@ -5470,7 +5282,7 @@ def gtable(lol, *args, **kwargs):
         firstrow = lol[0]
         # dbug(f"firstrow_len: {firstrow_len}, lol[0]: {lol[0]}")
     err_cnt = 0
-    """--== Test row lengths ... do cols = num or elems throughout ==--"""
+    """--== Test row lengths (ie num of elems or cols) ... do cols = num or elems throughout ==--"""
     # let's test lol rows to make sure number of col matches
     # dbug(lol)
     for n, row in enumerate(lol, start=1):
@@ -5513,19 +5325,27 @@ def gtable(lol, *args, **kwargs):
                 # dbug(row_nums)
                 # dbug(firstrow)
                 # dbug(row)
+                screen_cols = get_columns()
+                dbug(screen_cols)
+                firstrow_max_len = maxof(lol[0])
+                if maxof(row) > screen_cols - (firstrow_max_len + 15):
+                    row_max = screen_cols - (firstrow_max_len + 15)
+                    row = [str(elem)[:row_max]+" ..." if nclen(elem) > screen_cols else str(elem) for elem in row]
                 gcolumnize([row_nums, firstrow, row], 'prnt', 'centered', 'boxed',
-                           cols=3, title="Line#, Firstrow, This Row",
+                           cols=3, title="Col#, Firstrow, This Row",
                            footer=dbug('here'), box_clr="red on black!")
                 err_table = ["Row#", "Firstrow", "This Row"]
                 for num, x in enumerate(row_nums):
                     try:
                         firstrow_elem = firstrow[num]
-                    except:
+                    except Exception as Error:
                         firstrow_elem = "..."
+                        # dbug(Error)
                     try:
                         row_elem = row[num]
-                    except:
+                    except Exception as Error:
                         row_elem = "..."
+                        # dbug(Error)
                     my_row = [x, firstrow_elem, row_elem]
                     err_table.append(my_row)
                 # dbug(err_table)
@@ -5546,7 +5366,7 @@ def gtable(lol, *args, **kwargs):
                 # wrap if needed
                 if isinstance(elem, str):
                     if max_col_len == 0:
-                        max_col_len = 99;
+                        max_col_len = 99
                     if nclen(str(elem)) > max_col_len - 5:  # for padding
                         elem = wrapit(elem, length=int(max_col_len - 5))
             if isinstance(elem, list):
@@ -5693,8 +5513,6 @@ def gtable(lol, *args, **kwargs):
     # dbug(num_cols)
     # dbug(lol[:3])
     # dbug(len(lol))
-    # if len(lol) > 125:
-        # dbug(lol[124])
     """--== excluded_cols ==--"""
     if len(excluded_cols) > 0:
         new_lol = []
@@ -5713,49 +5531,103 @@ def gtable(lol, *args, **kwargs):
     # dbug(lol[:3])
     """--== filterby ==--"""
     if len(filterby_d) == 1:
-        filterby_col = list(filterby_d.keys())[0]
-        filterby_str = list(filterby_d.values())[0]
+        # dbug(filterby_d)
+        # someday maybe I will consider more than one TODO gwm 20230104
+        """--== init ==--"""
         hdr = lol[0]  # colnames
+        filterby_col = list(filterby_d.keys())[0]
+        # filterby_i = None
         filterby_i = hdr.index(filterby_col)  # filterby col index number
+        # dbug(filterby_i)
+        # dbug(len(hdr))
+        for n, col in enumerate(hdr):
+            if filterby_col == col:
+                # dbug(f"Found filterby_col: {filterby_col} == col: {col} n: {n}")
+                filterby_i = n
+                break
+        # dbug(filterby_i)
+        if filterby_i is None:
+            dbug(f"Failed to find filterby_col: {filterby_col} in hrd: {hdr}")
+        filterby_str = list(filterby_d.values())[0]
+        pat = ""  # default: non-regex
+        """--== convert ==--"""
+        if rgx_b:
+            pat = filterby_str  # now we have a regex search
+            # ci_b = False
+            # dbug("filterby must be a regex so we will treat it as one")
+        """--== process ==--"""
         new_lol = []
         if ci_b:
             # ci = case-insensitive
             filterby_str = filterby_str.lower()
         for row in lol:
+            # dbug(f"filterby_d: {filterby_d} filterby_col: {filterby_col} filterby_i: {filterby_i} filterby_str: {filterby_str} hdr: {hdr}")
             elem = str(row[filterby_i])
             if ci_b:  # case_insensitive
                 elem = elem.lower()
             # dbug(f"filterby_str: {filterby_str} elem: {elem} ")
+            """--== check for match ==--"""
+            if len(pat) > 1:
+                # dbug(f"chkg rgx_b: {rgx_b} pat: {pat} elem: {elem} ci_b: {ci_b}")
+                if re.search(pat, elem):
+                    # dbug(f"Found that pat: {pat} matches elme: {elem} ci_b: {ci_b}")
+                    new_lol.append(row)
+                    continue
             if filterby_str in elem:
+                # not a regex (a typical 'like %pat%' database search')
                 # dbug(f"filterby_str: {filterby_str} elem: {elem} ")
                 new_lol.append(row)
         new_lol.insert(0, hdr)
         lol = new_lol
-        """--== EOB ==--"""
+        """--== EOB filterby ==--"""
     # dbug(lol[:3])
-    # if len(lol) > 125:
-        # dbug(lol[124])
     """--== condition any numbers ==--"""
     # Condition any numbers before measuring the lenght (see next block)
     if neg or rnd != "" or human:
+        # dbug(f"rnd: {rnd} human: {human}")
         new_lol = []
+        mycolnames = lol[0]
+        # for row in lol[:3]:  # for debugging
         for row in lol:
             # dbug(row)
             new_row = []
             for n, elem in enumerate(row):
-                corresponding_col = lol[0][n]
-                # dbug(corresponding_col)
-                if 'date' in corresponding_col.lower() or 'time' in corresponding_col.lower():
-                    # skip any dates or times
-                    # dbug(f"skipping elem: {elem} corresponding_col: {corresponding_col}")
-                    continue
-                if isnumber(elem) or str(elem).lower() == 'nan':
-                    elem = cond_num(elem, rnd=rnd, human=human, neg=neg, nan=nan)
-                new_row.append(elem)
-            # dbug(new_row)
+                new_elem = elem
+                if isnumber(elem):
+                    myrnd = ""
+                    myhuman = ""
+                    myneg = ""
+                    # dbug(f"elem: {elem} isnumber...")
+                    if isinstance(rnd, dict):
+                        rnd_l = list(rnd.keys())
+                        # dbug(mycolnames[n])
+                        if mycolnames[n] in rnd_l:
+                            # dbug(f"mycolnames[n]: {mycolnames[n]} is in rnd_l: {rnd_l} with val rnd[mycolnames[n]]: {rnd[mycolnames[n]]}")
+                            # elem = cond_num(elem, rnd=rnd[mycolnames[n]])
+                            myrnd = rnd[mycolnames[n]]
+                            # dbug(f"elem: {elem}", 'ask')
+                        else:
+                            # dbug(f"Oooops mycolnames[n]: {mycolnames[n]} is not in rnd_l: {rnd_l}")
+                            myrnd = ""
+                    # else:
+                    if isinstance(human, list):
+                        # dbug(f"chkg mycolnames[n]: {mycolnames[n]} in human: {human}")
+                        if mycolnames[n] in human:
+                            myhuman = True
+                            # dbug(f"Making myhuman: {myhuman} mycolnames[n]: {mycolnames[n]} n: {n}")
+                        else:
+                            myhuman = ""
+                    if isinstance(neg, list):
+                        if mycolnames[n] in neg:
+                            myneg = True
+                        else:
+                            myneg = False
+                    # dbug(f"elem: {elem} myneg: {myneg} mycolnames[n]: {mycolnames[n]} neg: {neg}")
+                    new_elem = cond_num(elem, rnd=myrnd, human=myhuman, neg=myneg)
+                    # dbug(f"myrnd: {myrnd} myhuman: {myhuman} mycolnames[n: {n}]: {mycolnames[n]} elem: {elem} rnd_l: {rnd_l} human: {human} new_elem: {new_elem}")
+                new_row.append(new_elem)
             new_lol.append(new_row)
         lol = new_lol
-    # dbug(lol[:3])
     """--== get max_elem_len[col] length for each col ==--"""
     # Now get max length for each column - in a series of steps using lol[0]
     num_cols = len(lol[0])
@@ -5806,66 +5678,6 @@ def gtable(lol, *args, **kwargs):
     if nclen(footer) + 4 > max_width:
         max_width = nclen(footer) + 4
     """--== Build Table ==--"""
-    """--== condition any numbers ==--"""
-    # Condition any numbers before measuring the lenght (see next block)
-    if neg or rnd != "" or human:
-        new_lol = []
-        for row in lol:
-            new_row = []
-            for elem in row:
-                if isnumber(elem):
-                    elem = cond_num(elem, rnd=rnd, human=human, neg=neg)
-                new_row.append(elem)
-            new_lol.append(new_row)
-        lol = new_lol
-    """--== get max_elem_len[col] length for each col ==--"""
-    # Now get max length for each column - in a series of steps using lol[0]
-    for idx in range(num_cols):
-        if not isinstance(lol[0][idx], str):
-            hdr_elem = str(lol[0][idx])
-        hdr_elem = lol[0][idx]
-        # initializes a max_elem_len for each col using row one (lol[0])
-        if isinstance(hdr_elem, list):
-            # dbug(hdr_elem)
-            hdr_elem = hdr_elem[0]
-        else:
-            hdr_elem = str(lol[0][idx])
-        hdr_elem_len = nclen(hdr_elem)
-        max_elem_len.append(hdr_elem_len)
-    new_lol = []
-    for row_num, row in enumerate(lol):
-        new_row = []
-        # calc max_elem_len for each col
-        if row == []:
-            # skip a blank or empty row
-            continue
-        for col_num, elem in enumerate(row):
-            # for each elem in row
-            my_elem = elem
-            if not isinstance(elem, list):
-                # if str(elem) has line breaks, make it a list
-                if "\n" in str(my_elem):
-                    my_elem = str(elem).split("\n")
-            """--== Is this a muti_line row? ==--"""
-            if isinstance(my_elem, list):
-                # for measuring length purposes only
-                if len(my_elem) > 1:
-                    max_row_lines[row_num - 1] = len(elem)  # sets the max_row_lines number to len of my_elem list - makes it multi_line
-                    my_elem = max(my_elem, key=len)  # this makes my_elem the longest str in the list
-                    if nclen(my_elem) > max_elem_len[col_num]:
-                        max_elem_len[col_num] = nclen(my_elem) + 2  # adding some padding
-            # now set max_elem_len[col_num] for each elem
-            if nclen(str(my_elem)) > max_elem_len[col_num]:
-                max_elem_len[col_num] = nclen(str(my_elem))  # set max col width
-            new_row.append(elem)
-        new_lol.append(new_row)
-    lol = new_lol
-    if nclen(title) + 4 > max_width:
-        max_width = nclen(title) + 4
-    if nclen(footer) + 4 > max_width:
-        max_width = nclen(footer) + 4
-    # dbug(lol)
-    """--== Build Table ==--"""
     for row_num, row in enumerate(lol):
         # line = vc
         # dbug(row)
@@ -5884,6 +5696,7 @@ def gtable(lol, *args, **kwargs):
                         # start adding multi_line rows...  this is a multi_line elem (it is of list type)
                         # this is a multi_line elem so use the first item in that elem and increment elem_line_num
                         # elem_num_lines[elem_num] = len(elem)
+                        # dbug(f"This is a multi_line elem as it is a list. elem: {elem}")
                         new_elem = elem[add_row_num]
                     else:
                         # elem is not multi_line (ie not a list)
@@ -6113,11 +5926,9 @@ def chunkit(my_l, size, *args, **kwargs):
     return rtrn
 
 
-
-
 def splitit(s, delimiter=" "):
     """
-    purpose: given a string (s) split it using delimiter which can be a string or regex
+    purpose: given a string (s), split it using delimiter which can be a string or regex
     requires: import re
     input:
         - s: str  # string to split
@@ -6148,35 +5959,81 @@ def split_codes(val, *args, **kwargs):
     purpose: to split out ansi codes and return them
     input: elem: str (that contains ansi codes for color)
     options: TODO include elem dflt=False
-    returns: codes: list (unless elem=True, then it is a dictionary with preffix, elem, and suffix as key/value pairs)
-    notes: - used in color_neg()
+    returns: codes: list (unless elem=True [or 'with_elem' or 'asdict'], then it is a dictionary with preffix, elem, and suffix as key/value pairs)
+    notes: - used in cond_num() aka: color_neg()
+        - NOTE: this function expects both a prefix code and a suffix code!
+        - this function is not perfect and can lead to problems so use judiciously
     """
-    asdict_b = bool_val(['elem', 'with_elem', 'asdict'], args, kwargs, dflt=False)
+    """--== Debugging ==--"""
+    # dbug(funcname())
     # dbug(repr(val))
-    pat = "(?P<prefix>\x1b[\[\d\;]+m)(?P<elem>.*)(?P<suffix>\x1b.*m)"
+    # dbug(args)
+    # dbug(kwargs)
+    """--== Config ==--"""
+    asdict_b = bool_val(['elem', 'with_elem', 'asdict'], args, kwargs, dflt=False)
+    # dbug(asdict_b)
+    """--== Init ==--"""
+    """--== Process ==--"""
+    # val = val + gclr('reset')  # make sure it has an ending code
+    pat = r"(?P<prefix>\x1b[\[\d\;]+m)(?P<elem>.*)(?P<suffix>\x1b.*m)"
     r = re.match(pat, val)
     if r:
-      my_d = r.groupdict()
+        my_d = r.groupdict()
     else:
-      my_d = {'prefix': "", 'elem': val, 'suffix': ""}
+        my_d = {'prefix': "", 'elem': val, 'suffix': ""}
     if asdict_b:
-        return my_d
+        # dbug(f"Returning: my_d: {my_d}")
+        return my_d  # also includes ['elem': elem] ... see above
     else:
-        return [my_d['prefix'], my_d['suffix']]
+        return [my_d['prefix'], my_d['suffix']]  # returning a list with prefix and postfix code
+    # ### EOB def split_codes(val, *args, **kwargs): ### #
+
+
+def split_codes_demo(my_s=gclr('red')+"test string"+gclr('reset'), *args, **kwargs):
+    """
+    WIP
+    purpose: test/demo of splitting ansii code away from a string
+    """
+    pre_post_codes_l = split_codes(my_s)
+    pre_post_codes_l = split_codes(my_s, 'asdict')
+    my_s = my_s.replace(gclr('reset'), "")
+    pre_post_codes_l = split_codes(my_s, 'asdict')
+    gtable(pre_post_codes_l, 'hdr', 'prnt', footer=dbug('here'))
+    dbug('ask')
+    """--== SEP_LINE ==--"""
+    print("-"*40)
+    dbug(pre_post_codes_l)
+    words_l = ["one", gclr('red on white')+'two', gclr('reset')+'word with reset before and after'+gclr('reset')]
+    for wrd in words_l:
+        dbug(split_codes(wrd), 'asdict')
+    print("-"*40)
+    dbug('ask')
+    """--== SEP_LINE ==--"""
+    my_words = gclr('white! on black') + "one and " + gclr("blue on white") + 'two' + gclr('reset')
+    dbug(my_words)
+    words_l = my_words.split()
+    for word in words_l:
+        dbug(gclr('reset'))
+        dbug(word)
+        dbug(split_codes(word, 'asdict'))
+    # ### EOB ### #
 
 
 # #################
-def color_neg(elem, *args, **kwargs):
+def cond_num(elem, *args, **kwargs):
     # #############
     """
     purpose: this conditions (colorizes and adds commas) elems if they are numbers
     input: elem
     options: "neg_color=red on black!": str, pos_color="green! on black!": str, rnd=0: int
-    -   color: bool        # will color the number ... default red for negative and green for positive
-    -   neg_color: str     # you can change the color for negative numbers
-    -   pos_color: str     # you can change the color for positive numbers
-    -   human: bool        # adds reduces large numbers to 10000000 to 1M etc
-    -   nan: str           # allows you to change "nan" or "NaN" to any string you want. default=""
+    -   color: bool         # will color the number ... default red for negative and green for positive
+    -   neg_color: str      # you can change the color for negative numbers
+    -   pos_color: str      # you can change the color for positive numbers
+    -   rnd: int            # if rnd == "" nothing will be done,
+            if rnd is 0 it will make elem an integer,
+            if rnd > 0 then that will be used for the number of places to round
+    -   human: bool         # adds reduces large numbers to 10000000 to 1M etc
+    -   nan: str            # allows you to change "nan" or "NaN" to any string you want. default=""
     returns: elem (conditioned; colored)
     use:
     -   for n, row in enumerate(lol):
@@ -6186,12 +6043,14 @@ def color_neg(elem, *args, **kwargs):
     -       # table.add_row(*row)
     -       table_lol.append(*row)
     NOTE: this may return an elem with a different length
+    aka: color_neg(elem)
     """
     # dbug(funcname())
     # dbug(repr(elem))
     """--== Config ==--"""
     clr_b = bool_val(["neg", "color", "clr", "colorize", "pos"], args, kwargs, dflt=True)  # "neg" and 'pos'are remanants of past code
-    rnd = kvarg_val(['round', 'rnd'], kwargs, dflt=0)
+    # dbug(clr_b)
+    rnd = kvarg_val(['round', 'rnd'], kwargs, dflt="")
     neg_color = kvarg_val(['neg_color'], kwargs, dflt='red! on rgb(0,0,0)')
     pos_color = kvarg_val(['pos_color'], kwargs, dflt='green! on rgb(0,0,0)')
     human = bool_val(["human", "h"], args, kwargs, dflt=False)
@@ -6202,7 +6061,7 @@ def color_neg(elem, *args, **kwargs):
     # if "%" in elem:
     #     elem = elem
     """--== Init ==--"""
-    last_msg = ""
+    # last_msg = ""
     RESET = sub_color('reset')
     if clr_b:
         elem = escape_ansi(elem)
@@ -6213,24 +6072,13 @@ def color_neg(elem, *args, **kwargs):
         elem = str(elem)
         NEG_COLOR = ""
         POS_COLOR = ""
-    # dbug(f"rnd: {rnd} neg_color: {neg_color} NEG_GOLOR: {NEG_COLOR}{repr(NEG_COLOR)}pos_color: {pos_color} POS_COLOR: {POS_COLOR}{repr(POS_COLOR)} elem: {elem}")
     # NOTE! IMPORTANT! If you want a number to be treated like a string, ie ignored here, precede it with an underscore (_) or surround it with [] or someother means
-    #   or set neg to False in rtable
-    # pos_sym = False
-    # dbug(elem)
-    # dbug(f"neg: {neg} rnd: {rnd} human: {human} elem: {elem}")
-    # if not neg:
-    #     dbug(elem)
-    #     return elem
+    #   or set neg to False in table or rnd="", human=""
     if nan != "":
-        # dbug(f"elem: [{elem}] type(elem): {type(elem)} nan: {nan}")
         if str(elem).lower() == "nan":
             elem = str(nan)
-        # dbug(f"elem: {elem} nan: {nan}")
     if isnumber(elem) and not str(elem).startswith("_"):
         suffix = prefix = ""
-        # dbug(f"neg: {neg} rnd: {rnd} human: {human} elem: {elem} repr(elem): {repr(elem)}")
-        # flag_prcnt = False
         if str(elem).endswith("G"):
             elem = elem.replace("G", "")
             suffix = "G"
@@ -6247,14 +6095,10 @@ def color_neg(elem, *args, **kwargs):
             prefix = "+"
             elem = elem.lstrip("+")
         elem_val = escape_ansi(elem)
-        # codes = split_codes(elem)
-        # pat = elem_val + "(?!;)(?!m)"
-        # dbug(elem_val)
-        # dbug(repr(elem))
-        # dbug(pat)
-        # codes = re.split(pat, elem)
-        # codes = [codes_elem_d['prefix'], codes_elem_d['suffix']]
-        # dbug(codes)
+        if rnd == 0:
+            elem_val = str(int(float(elem_val)))  # needs to be str for next test
+        if isnumber(rnd) and rnd > 0:
+            elem_val = str(round(float(elem_val), rnd))
         if clr_b and not re.search(r"[BMK]", elem_val):
             if "." in str(elem_val):
                 clean_val = elem_val.replace(",", "")
@@ -6272,38 +6116,16 @@ def color_neg(elem, *args, **kwargs):
                 prefix = POS_COLOR
                 # dbug(f"POS_COLOR: {POS_COLOR} {repr(POS_COLOR)}")
                 # elem = f"{POS_COLOR}{elem_val}"
-        # dbug(repr(elem))
-        if rnd != "" or rnd == 0:
-            # number = escape_ansi(elem)
-            # pre_post_codes = str(elem).split(number)
-            # dbug(len(pre_post_codes))
-            # dbug(f"Rounding elem: {elem}")
-            if not str(elem_val).endswith(("B", "M", "K", "G", "T", "Kb", "Mb", "%")):
-                # TODO consider this: rgx = re.search(r'[a-zA-Z%\+,]+', "-4.3%")
-                if "," not in str(elem_val):
-                    elem_val = round(float(elem_val), 2)
-                    elem_val = f"{elem_val:.2f}"
-            # else:  # debugging
-                # dbug(elem)
-            # elem_val = pre_post_codes[0] + f"{round(float(number), 2)}" + pre_post_codes[1]
-        # dbug(repr(elem_val))
         if human:
-            # number = escape_ansi(elem)
-            # pre_post_codes = str(elem).split(number)
-            # dbug(repr(elem_val))
-            # dbug(repr(number))
-            # elem = pre_post_codes[0] + f"{float(number):,}" + pre_post_codes[1]
             if not str(elem_val).endswith(("B", "M", "K", "G", "T", "Kb", "Mb", "%")):
                 if float(elem_val) > 1000000000:
                     elem_val = float(elem_val) // 1000000000
-                    if rnd > 0:
-                        elem_val = str(round(elem_val, 2)) + "B"
+                    elem_val = str(round(elem_val, 2)) + "B"
             if not str(elem_val).endswith(("B", "M", "K", "G", "T", "Kb", "Mb", "%")):
                 try:
                     if float(elem) > 1000000:
                         elem_val = float(elem_val) // 1000000
-                        if rnd > 0:
-                            elem_val = str(round(elem_val, 2)) + "M"
+                        elem_val = str(round(elem_val, 2)) + "M"
                 except Exception as Error:
                     dbug(f"Error: {Error} elem_val: {elem_val}")
             if not str(elem_val).endswith(("B", "M", "K", "G", "T", "Kb", "Mb", "%")):
@@ -6313,23 +6135,19 @@ def color_neg(elem, *args, **kwargs):
                         elem_val = str(round(elem_val, 2)) + "K"
             if "," in str(elem_val):
                 elem_val = str(elem_val).replace(",", "")
-                # dbug(elem_val)
                 elem_val = "'" + elem_val + "'"
             if str(elem_val).replace(".", "").isnumeric():
                 elem_val = f"{float(elem_val):,}"
-            # dbug(elem_val)
-        # dbug(human)
         elem = prefix + str(elem_val) + suffix
-        # dbug(elem)
     if rset:
         elem += RESET
-    # dbug(f"Returning elem: {elem}")
     return elem
-    # ###  EOB def color_neg(elem, *args, **kwargs): ### #
+    # ###  EOB def cond_num(elem, *args, **kwargs): ### #
 
 
 # alias for above
-cond_num = color_neg
+# cond_num = color_neg
+color_neg = cond_num
 
 
 # def dict2str(d):
@@ -7033,7 +6851,7 @@ def do_edit(file, lnum=0):
     """
     if lnum:
         # cmd = f"vim {file} +{str(lnum)}"
-        cmd = "vim i" + file + " " + str(lnum)
+        cmd = "vim " + file + " " + str(lnum)
     else:
         # cmd = f"vim {file}"
         cmd = "vim " + file
@@ -7610,32 +7428,54 @@ def max_width_lol(input_table):
 
 
 # ####################
-def comma_split(my_s):
+def comma_split(my_s, *args, **kwargs):
     # ################
     """
     purpose: split a line (or list of lines) using commas unless the comma is embedded in quotes
     returns: list (or list od lists) of comma separated elements
     notes: this is a kludge but it works for me
     """
-    """--== Convert ==--"""
+    """--== Debugging ==--"""
+    # dbug(funcname())
+    # dbug(args)
+    # dbug(kwargs)
+    """--== Recurse if my_s is a list ==--"""
     if isinstance(my_s, list):
+        # we will need to recurse...
+        # dbug(my_s[:3])
         new_l = []
         for ln in my_s:
+            # dbug(ln)
             new_ln = comma_split(ln)
+            # dbug(new_ln, 'ask')
             new_l.append(new_ln)
-        return new_l
     """--== Process ==--"""
-    new_s = re.sub(r"'(.*),(.*?)'", r"\1__comma__\2", my_s)
-    # dbug(new_s)
-    new_s = re.sub(r'"(.*),(.*?)"', r"\1__comma__\2", new_s)
-    # dbug(new_s)
-    this_l = new_s.split(",")
-    # dbug(this_l)
-    new_l = []
-    for elem in this_l:
-        elem = elem.replace("__comma__", ",")
-        new_l.append(elem)
+    # new_l = re.split(r'(?:,\s*)(?=(?:[^"]*"[^"]*")*[^"]*$)', my_s)
+    # dbug(new_l)
+    if isinstance(my_s, str):
+        # this breaks if a single quote mark is embedded in an element - even if it is embedded in a quote bound string TODO
+        comma_pat = re.compile(r",(?=(?:[^\"']*[\"'][^\"']*[\"'])*[^\"']*$)")
+        split_result = comma_pat.split(my_s)
+        # dbug(split_result)
+        new_l = []
+        for elem in split_result:
+            elem = elem.strip()
+            # dbug(elem)
+            if elem.startswith('"') and elem.endswith('"'):
+                # dbug(elem)
+                elem = elem.strip('"')
+                # dbug(elem)
+            if elem.startswith("'") and elem.endswith("'"):
+                # dbug(elem)
+                elem = elem.strip("'")
+                # dbug(elem)
+            if "'" in elem and "," in elem:
+                elems = elem.split(",")
+                new_l.extend(elems)
+            else:
+                new_l.append(elem)
     return new_l
+    # ### EOB def comma_split(my_s): ### #
 
 
 def comma_split_demo(*args, **kwargs):
@@ -7645,9 +7485,23 @@ def comma_split_demo(*args, **kwargs):
     s = "one, two, 'three,with a comma', four"
     dbug(s)
     dbug(comma_split(s))
+    print("-"*40)
     s_l = [s, 'six, "seven, with comma", eight']
     dbug(s_l)
     dbug(comma_split(s_l))
+    print("-"*40)
+    s = "col1_val, col2_val, 'col3w/comma,val', \"col4alsow/comma,val\", col5_val"
+    dbug(s)
+    dbug(comma_split(s))
+    print("-"*40)
+    ln = "Root beer chops, 'Original recipe yields 4 srvngs, 4 (1-inch thick) pork chops, 3 turtle doves'"
+    dbug(ln)
+    dbug(comma_split(ln))
+    print("-"*40)
+#    s, = "Root beer chops, 'Original recipe yields 4 srvngs, 4 (1-inch thick) pork chops,  3 (12 fluid ounce) cans or bottled root beer,  salt and pepper to taste,  1 cup beef stock,  2 tablespoons brown sugar,  1/2 teaspoon chipotle-flavored hot sauce,  2 teaspoons Worcestershire sauce' , 'Step 1  Place the pork chops in a dish; pour 2 cans of the root beer over the chops. Place in refrigerator to marinate at least 2 hours. Remove the pork chops from the root beer; s  eason with salt and pepper.    Step 2  Combine the remaining can of root beer, the beef stock, brown sugar, hot sauce, and Worcestershire sauce in a saucepan over medium heat; simmer the mixture until it reduces   to about 3/4 cup. Set aside.    Step 3  Preheat an outdoor grill for medium-high heat, and lightly oil the grate.    Step 4  Grill the pork chops on the preheated grill until the no longer pink in the center, about 8 minutes per side. An instant-read thermometer inserted into the center should re  ad 145 degrees F (63 degrees C). Brush the chops generously with the reduction sauce and continue cooking for about 2 minutes more per side. Remove from grill and brush wit  h any remaining sauce. Season with salt to taste before serving.'"
+#    s = "Root beer chops, 'Original recipe yields 4 srvngs, 4 (1-inch thick) pork chops' , 'Step 1  Place the pork chops in a dish; pour the root beer; , brown sugar, hot sauce '"
+##    dbug(s)
+##    dbug(comma_split(s))
 
 
 
@@ -7655,23 +7509,30 @@ def comma_split_demo(*args, **kwargs):
 def get_elems(lines, *args, index=False, col_limit=20, **kwargs):
     # ##############################
     """
-    purpose: wip
+    purpose: designed to split a list of lines on delimiter - respects quoted elements that may contain "," even if that is the delimiter 
+        - wip - this does the same thing as comma_split but adds a few options TODO
     Input:
         lines (as a list)
     options:
         - delimiter: str     # (default is a comma)
-        - col_limit: bool    # max column size default=20
-        - index: bool        # will insert an index (line numbers starting with 0)
-        - lst: bool          # assumes a single line (ie: lines = str) so it returns a list of elemes from that line instead of a list_of_elems (ie an lol)
+        - col_limit: bool    # max column size default=0 - if 0 no truncation occurs otherwise all elems are limited to col_limit
+        - index: bool        # will insert an index (line numbers starting with 0)  # not used yet TODO
+        - lst: bool          # assumes a single line (ie: lines = str) so it returns a list of elemes from that line instead of a list_of_elems for multiple lines (ie an lol)
     Returns:
         an array: list of list (lol - lines of elements aka rows and columns)
         aka rows_lol
     """
     """--== debugging ==--"""
-    # dbug(f"delimiter: {delimiter} lines: {lines}")
-    # dbug(f"delimiter: {delimiter} col_limit: {col_limit}")
+    # dbug(funcname())
+    # dbug(lines[:3])
+    # dbug(index)
+    # dbug(col_limit)
+    # dbug(args)
+    # dbug(kwargs)
     """--== Config ==--"""
     delimiter = kvarg_val(["delim", 'delimiter'], kwargs, dflt=",")
+    col_limit = kvarg_val(["col_limit", 'collimit' 'colmax', 'col_max'], kwargs, dflt=0)  # not used yet TODO
+    index = kvarg_val(["index", 'indx', 'idx'], kwargs, dflt="")  # not used yet TODO
     # dbug(delimiter)
     lst_b = bool_val(["list", "lst"], args, kwargs, dflt=False)
     """--== Imports ==--"""
@@ -7679,13 +7540,17 @@ def get_elems(lines, *args, index=False, col_limit=20, **kwargs):
     """--== Init ==--"""
     my_array = []
     """--== Convert ==--"""
+    # make it a list of lines
     if isinstance(lines, str):
         lines = [lines]
+        dbug(lines[:3])
+    """--== Validate ==--"""
     if "," not in lines[0] and "," in delimiter:
         # dbug("delimiter: [{delimiter}] not found in lines[0]: {lines[0]} reverting to a whitespace ")
         delimiter = " "
         if delimiter not in lines[0]:
             dbug("delimiter: [{delimiter}] not found in lines[0]: {lines[0]} reverting to a whitespace ")
+    """--== SEP_LINE ==--"""
     if delimiter == " ":
         new_rows = []
         for line in lines:
@@ -7697,15 +7562,9 @@ def get_elems(lines, *args, index=False, col_limit=20, **kwargs):
         my_array = new_rows
         # dbug(my_array[:2])
     else:
-        # import csv
-        # my_array = list(csv.reader(lines))
+        # dbug(lines[:3], 'ask')
         my_array = comma_split(lines)
-        # for line in lines:
-            # # dbug(line)
-            # elems = comma_split(line)
-            # # dbug(elems)
-            # new_rows.append(elems)
-        # dbug(my_array[12:17])
+        # dbug(my_array[:3], 'ask')
     """--== Process ==--"""
     # import csv
     # my_array = csv.reader(lines)
@@ -7723,8 +7582,62 @@ def get_elems(lines, *args, index=False, col_limit=20, **kwargs):
     if lst_b:
         # this all may change to testing if len(my_array) == 1 then do this
         my_array = my_array[0]
-    return my_array  # aka rows_lol
+    """--== SEP_LINE ==--"""
+    new_array = []
+    for row in my_array:
+        my_row = []
+        for elem in row:
+            if elem.startswith('"') and elem.endswith('"'):
+                elem = elem.strip()
+                dbug(elem)
+                elem = elem.strip('"')
+                dbug(elem)
+            if elem.startswith("'") and elem.endswith("'"):
+                dbug(elem)
+                elem = elem.strip("'")
+                dbug(elem)
+            my_row.append(elem)
+            if col_limit > 0:
+                elem = elem[:col_limit]
+        new_array.append(my_row)
+    # dbug(new_array)
+    if index:
+        new_array = [row.insert(n) for n, row in enumerate(new_array)]
+        # dbug(new_array)
+    """--== SEP_LINE ==--"""
+    # dbug(f"Returning my_array: {my_array}")
+    # return my_array  # aka rows_lol
+    # dbug(f"Returning my_array: {new_array}")
+    return new_array  # aka rows_lol
     # ### EOB def get_elems(lines, *args, index=False, col_limit=20, **kwargs): ### #
+
+
+def get_elems_demo(*args, **kwargs):
+    """
+    WIP
+    """
+    s_l = ["one, two, 'three,with a comma', four", "another, 'row', of, cols"]
+    dbug(s_l)
+    dbug(get_elems(s_l))
+    dbug(get_elems(s_l), 'idx')
+    print("-"*40)
+    s2_l = s_l + ['six, "seven, with comma", eight']
+    dbug(s2_l)
+    dbug(get_elems(s2_l))
+    print("-"*40)
+    s = "col1_val, col2_val, 'col3w/comma,val', \"col4alsow/comma,val\", col5_val"
+    dbug(s)
+    dbug(comma_split(s))
+    print("-"*40)
+    ln = "Root beer chops, 'Original recipe yields 4 srvngs, 4 (1-inch thick) pork chops, 3 turtle doves'"
+    dbug(ln)
+    dbug(comma_split(ln))
+    print("-"*40)
+#    s, = "Root beer chops, 'Original recipe yields 4 srvngs, 4 (1-inch thick) pork chops,  3 (12 fluid ounce) cans or bottled root beer,  salt and pepper to taste,  1 cup beef stock,  2 tablespoons brown sugar,  1/2 teaspoon chipotle-flavored hot sauce,  2 teaspoons Worcestershire sauce' , 'Step 1  Place the pork chops in a dish; pour 2 cans of the root beer over the chops. Place in refrigerator to marinate at least 2 hours. Remove the pork chops from the root beer; s  eason with salt and pepper.    Step 2  Combine the remaining can of root beer, the beef stock, brown sugar, hot sauce, and Worcestershire sauce in a saucepan over medium heat; simmer the mixture until it reduces   to about 3/4 cup. Set aside.    Step 3  Preheat an outdoor grill for medium-high heat, and lightly oil the grate.    Step 4  Grill the pork chops on the preheated grill until the no longer pink in the center, about 8 minutes per side. An instant-read thermometer inserted into the center should re  ad 145 degrees F (63 degrees C). Brush the chops generously with the reduction sauce and continue cooking for about 2 minutes more per side. Remove from grill and brush wit  h any remaining sauce. Season with salt to taste before serving.'"
+#    s = "Root beer chops, 'Original recipe yields 4 srvngs, 4 (1-inch thick) pork chops' , 'Step 1  Place the pork chops in a dish; pour the root beer; , brown sugar, hot sauce '"
+##    dbug(s)
+##    dbug(comma_split(s))
+
 
 
 def pyscraper(url, pat):
@@ -7887,6 +7800,9 @@ def get_html_tables(url="", *args, show=False, timeout=10, **kwargs):
         # from fake_useragent import UserAgent
     """
     # dbug(funcname())
+    """--== Config ==--"""
+    show = bool_val(["show", 'prnt', 'verbose', 'print'], args, kwargs, dflt=show)
+    """--== SEP_LINE ==--"""
     try:
         import pandas as pd
     except Exception as e:
@@ -7910,7 +7826,11 @@ def get_html_tables(url="", *args, show=False, timeout=10, **kwargs):
     content = driver.page_source
     """--== SEP_LINE ==--"""
     time.sleep(1)
-    tables = pd.read_html(content)
+    try:
+        tables = pd.read_html(content)
+    except Exception as Error:
+        dbug(f"No tables found.... Error: {Error}")
+        return
     # here is what you can do with returned df tables
     if show:  # this is for debugging
         dbug(url)
@@ -8154,6 +8074,8 @@ def add_or_replace(filename, action, pattern, new_line, *args, backup=True, **kw
     shadow_b = bool_val('shadowed', args, kwargs, dflt=False)
     center_b = bool_val('centered', args, kwargs, dflt=False)
     prnt = bool_val(['prnt', 'print', 'show', 'verify', 'verbose'], args, kwargs, dflt=False)
+    backup = bool_val(["bak", "backup", "bakup"], args, kwargs, dflt=backup)
+    prnt = bool_val(["show", "prnt", "print", "verbose"], args, kwargs, )
     """--== Init ==--"""
     linenum = 0
     cnt = 0
@@ -8163,7 +8085,7 @@ def add_or_replace(filename, action, pattern, new_line, *args, backup=True, **kw
     if backup:
         try:
             shutil.copy(filename, f"{filename}.bak")
-            printit(centered(f"Copied [{filename}] to {filename}.bak"))
+            dbug(f"Copied [{filename}] to {filename}.bak", 'centered')
         except Exception as e:
             dbug(f"Something went wrong? Error: {e}")
             return
@@ -8477,6 +8399,11 @@ def islos(my_los=["a", "list", "of", "strings"], *args, **kwargs):
     purpose: determines if my_los is a list of strings
     returns: bool
     """
+    """--== Debugging ==--"""
+    # dbug(funcname())
+    # dbug(my_los)
+    # dbug(args)
+    # dbug(kwargs)
     """--== Config ==--"""
     show = bool_val(["show"], args, kwargs, dflt=False)
     # any_b = bool_val(["any"], args, kwargs, dflt=False)
@@ -8484,7 +8411,10 @@ def islos(my_los=["a", "list", "of", "strings"], *args, **kwargs):
     # scope = kvarg_val(["scope"], kwargs, dflt="all")
     """--== validate ==--"""
     if my_los is None:
-        dbug("my_los: {my_los} is None ")
+        # dbug("my_los: {my_los} is None ")
+        return False
+    if not isinstance(my_los, list):
+        # dbug("my_los: {my_los} is not a list ")
         return False
     """--== Init ==--"""
     scope = "all"
@@ -8501,6 +8431,7 @@ def islos(my_los=["a", "list", "of", "strings"], *args, **kwargs):
     if show:
         dbug(my_los)
     if all_b or scope in ("all"):
+        # dbug(my_los)
         if all([isinstance(x, str) for x in my_los]):
             # dbug("Yes this is a los")
             rtrn = True
@@ -8951,6 +8882,9 @@ def gblock(msgs_l, *args, **kwargs):
     if max_len >= screen_width:
         dbug(f"It appears that the requested content length {max_len} exceeds the (approx) terminal screen available width {screen_width}", 'boxed', 'centered')
         # dbug(f"real screen width = {get_columns()}")
+        for ln in new_lines2:
+            if nclen(ln) > screen_width:
+                dbug(f"This line is too long: [{ln}]")
         # dbug(new_lines2, 'lst')
         return None
     """--== SEP_LINE ==--"""
