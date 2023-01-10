@@ -1225,11 +1225,6 @@ def gselect(selections, *args, **kwargs):
                 # dbug(ans)
                 ans = keys[int(ans)]
                 # dbug(ans)
-            # if rtrn in ("v", "V", "val", "vals", "value", "values"):
-                # if ans in vals:
-                    # dbug("OK")
-                # if ans not in vals:
-                    # return ans
             # else:
             #     ans = vals[int(ans)]
             footer_l.append(int(ans))
@@ -1276,6 +1271,7 @@ def gselect(selections, *args, **kwargs):
     if rtrn in ("i", "int"):
         if isnumber(rtrn_ans):
             rtrn_ans = int(rtrn_ans)
+    # dbug(f"Returning {rtrn_ans}")
     return rtrn_ans
     # ### EOB def gselect(selections, *args, **kwargs): ### #
 
@@ -5326,7 +5322,7 @@ def gtable(lol, *args, **kwargs):
                 # dbug(firstrow)
                 # dbug(row)
                 screen_cols = get_columns()
-                dbug(screen_cols)
+                # dbug(screen_cols)
                 firstrow_max_len = maxof(lol[0])
                 if maxof(row) > screen_cols - (firstrow_max_len + 15):
                     row_max = screen_cols - (firstrow_max_len + 15)
@@ -7506,6 +7502,26 @@ def comma_split_demo(*args, **kwargs):
 
 
 
+def comma_join(data, *args, **kwargs):
+    """
+    purpose: given a data list or rows with columns (a list of lists)
+            this function will turn each row into a proper comma delimited string or line
+    options: none so far
+    returns: a list of comma delimited strings (lines) typically used for csv
+    notes: this has not been fully tested yet
+    """
+    lines = []
+    for row in data:
+        line_l = [] 
+        for col in row:
+            if "," in col or "'" in col:
+                col = '"' + col + '"'
+            line_l.append(col)
+        lines.append(",".join(line_l))
+    # dbug(lines, 'lst')
+    return lines
+
+
 # ##################################
 def get_elems(lines, *args, index=False, col_limit=20, **kwargs):
     # ##############################
@@ -7590,13 +7606,13 @@ def get_elems(lines, *args, index=False, col_limit=20, **kwargs):
         for elem in row:
             if elem.startswith('"') and elem.endswith('"'):
                 elem = elem.strip()
-                dbug(elem)
+                # dbug(elem)
                 elem = elem.strip('"')
-                dbug(elem)
+                # dbug(elem)
             if elem.startswith("'") and elem.endswith("'"):
-                dbug(elem)
+                # dbug(elem)
                 elem = elem.strip("'")
-                dbug(elem)
+                # dbug(elem)
             my_row.append(elem)
             if col_limit > 0:
                 elem = elem[:col_limit]
