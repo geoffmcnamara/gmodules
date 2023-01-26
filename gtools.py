@@ -109,7 +109,7 @@ class Spinner:
         """--== config ==--"""
         # color = kvarg_val(["color", "spinner_color", "spinner_clr"], kwargs, dflt="")
         txt_color = kvarg_val(["text_color", "txt_color", "text_clr", "txt_clr"], kwargs, dflt="")
-        self.color = kvarg_val(["color"], kwargs, dflt="")
+        self.color = kvarg_val(["color", 'spinner_clr', 'spinner_color', 'clr'], kwargs, dflt="")
         # if isinstance(color, list):
         self.colors = kvarg_val(["colors", "color", "spinner_colrs", "spinner_clrs"], kwargs, dflt=[])
         self.COLOR = sub_color(self.color)
@@ -205,7 +205,7 @@ class Spinner:
             spinner_len = 1
             if self.prog:
                 spinner_len = len(spinner_chrs)
-            if self.etime :
+            if self.etime:
                 spinner_len += 2
             shift = -(spinner_len)
             message = printit(message, 'centered', prnt=False, rtrn_type="str", color=txt_color, shift=shift)
@@ -348,13 +348,16 @@ def Spinner_demo():
     """
     purpose: demo of Spinner
     """
-    with Spinner("[red on black]Working...approx: 5 sec[/] ", 'elapsed', style='vbar', prog=False,  colors=shades('white'), elapsed_clr="yellow! on black", centered=True):
+    with Spinner("[red on black]Working...approx: 5 sec[/] ", 'elapsed', style='vbar', prog=False,
+                 colors=shades('white'), elapsed_clr="yellow! on black", centered=True):
         time.sleep(5)
     styles = ["ellipsis", "dot", "bar", "vbar", "moon", "pipe", "arrow", "balloons", 'braille', 'pulse', 'box', 'clock']
     # colors = ["red", "blue", "green", "yellow", "magenta", "white", "cyan"]
     # with Spinner(f"Demo progressive vbar ", 'centered', 'prog', 'elapsed', style='vbar', colors=colors):
     #     time.sleep(5)
-    red_shades = ['rgb(20,0,0)', 'rgb(40,0,0)', 'rgb(60,0,0)', 'rgb(80,0,0)', 'rgb(100,0,0)', 'rgb(120,0,0)', 'rgb(140,0,0)', 'rgb(160,0,0)', 'rgb(180,0,0)', 'rgb(200,0,0)', '  rgb(220,0,0)', 'rgb(240, 0,0)', 'rgb(254,0,0)', 'rgb(254,0,0)', 'rgb(254,0,0)', 'rgb(254,0,0)']
+    red_shades = ['rgb(20,0,0)', 'rgb(40,0,0)', 'rgb(60,0,0)', 'rgb(80,0,0)', 'rgb(100,0,0)',
+                  'rgb(120,0,0)', 'rgb(140,0,0)', 'rgb(160,0,0)', 'rgb(180,0,0)', 'rgb(200,0,0)',
+                  '  rgb(220,0,0)', 'rgb(240, 0,0)', 'rgb(254,0,0)', 'rgb(254,0,0)', 'rgb(254,0,0)', 'rgb(254,0,0)']
     while True:
         style = gselect(styles, 'centered', 'quit', rtrn="v")
         # style = gselect(styles, 'centered', rtrn="v", colors=colors)
@@ -368,7 +371,6 @@ def Spinner_demo():
         prog = askYN("Should we try progressive?", "n", 'centered')
         printit([f"Demo: Spinner(style: {style}", f"txt_clr: {txt_color}", f"spinner_clr: {color[:4]}...", f"time_clr: {time_color}", f"Progressive: {prog}... "], 'centered')
         with Spinner("Demo: Spinner: working... ): ", 'centered', 'elapsed', color=color, txt_color=txt_color, elapsed_clr=time_color, style=style, prog=prog):
-            # with Spinner(f"Demo: Spinner(style: {style} txt_clr: {txt_color} spinner_clr: {color} time_clr: {time_color}... ): ", 'centered', 'elapsed', color=color, txt_color=txt_color, elapsed_clr = time_color, style=style):
             time.sleep(wait_time)  # to simulate a long process
 
 
@@ -393,9 +395,11 @@ class Transcript:
     def __init__(self, filename):
         self.terminal = sys.stdout
         self.logfile = open(filename, "a")
+        """--== SEP_LINE ==--"""
     def write(self, message):
         self.terminal.write(message)
         self.logfile.write(message)
+        """--== SEP_LINE ==--"""
     def flush(self):
         # this flush method is needed for python 3 compatibility.
         # this handles the flush command by doing nothing.
@@ -406,87 +410,143 @@ class Transcript:
 
 def write_file(data, fname, *args, **kwargs):
     """
-    WIP
-    TODO 20221228
-    Notes: 
-        - data is a list of lists (rows of cols)
-        - assumes first line is comma delimited colnames (in a dat file that line will be commented)
-        - all comments go to the top
+    purpose: writes data to a file typically as a csv file (or a .dat file) - creates a new file or appends an existing file
+    options:
+        - colnames: list (adds hdr line if not currently there)
+        - comment_lines: str | list
+        - bak: bool
+        - ind: bool
+        - prnt: bool
+        - ask: bool
+        - append: bool   # whether to append data - the default=False whereby submitted data will overwrite the file
+    Notes:
+        - only use this to write a data file = either csv (or a dat file which is a csv file with the header commented)
+        - data should be a list of lists (rows of cols)
+        - assumes first line is comma delimited colnames or use colnames option (in a dat file the first line will be commented)
+        - all comments will go to/near the top
     """
     """--== Debugging ==--"""
     # dbug(funcname())
     # dbug(data[:3])
+    # dbug(args)
+    # dbug(kwargs)
     """--== Config ==--"""
-    id_flag = bool_val(["orig_id_flag", "id_flag", "indx", "idx"], args, kwargs, dflt=False)
+    prnt = bool_val(["print", "prnt", "show", "verbose"], args, kwargs, dflt=True)  # True for now TODO
+    ask_b = bool_val(["ask"], args, kwargs, dflt=True)  # True for now TODO
+    id_flag = bool_val(["orig_id_flag", "id_flag", "indx", "idx", "id"], args, kwargs, dflt=False)
     bak = bool_val(["bak"], args, kwargs, dflt=True)
-    comment_lines = kvarg_val(["comment_lines"], kwargs, dflt="")
+    # comment_lines = kvarg_val(["comment_lines"], kwargs, dflt=[])
     colnames = kvarg_val(["colnames", "col_names", "cols"], kwargs, dflt=[])
+    append_b = bool_val(["append", "a"], args, kwargs, dflt=False)
     """--== Local Import(s) ==--"""
-    import csv
+    # import csv
     """--== Init ==--"""
-    writefile = fname
-    hdr_comment = ""
-    """--== Process ==--"""
-    if colnames != []:
-        data.insert(0, colnames)
-    """--== get comment lines ==--"""
-    comment_lines = ""
-    with open(fname, "r") as f:
-        lines = f.readlines()
-    for ln in lines:
-        if fname.endswith(".dat"):
-            lines = lines[1:]
-        if ln.startswith("#"):
-            comment_lines += ln
-    # dbug(comment_lines)
-    """--== Determine file type (csv vs dat) ==--"""
-    if fname.endswith(".csv"):
-        comment_num = 1
-    if fname.endswith(".dat"):
-        comment_num = 2
-        if id_flag:
-            hdr_comment = "# " + ", ".join(data[0]) + "\n"
-        else:
-            hdr_comment = "# " + ", ".join(data[0][1:]) + "\n"  # making sure id is taken out
-        data = data[1:]
-        # dbug("This is a dat file")
-    # dbug(hdr_comment)
-    """--== Process ==--"""
-    num_comments = comment_lines.count("\n")
-    if num_comments > comment_num:
-        # dbug(comment_num)
-        # dbug(comment_lines)
-        printit("Comment Lines:", 'centered')
-        printit(comment_lines, 'centered')
-        printit(".... will be placed at the top of the new file", 'centered')
-    else:
-        # eliminate when it is just one when it is a dat file
-        # there is probably a better/clearer way to do this
-        comment_lines = ""
-    # dbug(comment_lines)
-    # dbug(orig_id_flag, 'ask')
-    if askYN(f"Are you sure you want to overwrite {fname}? ", "n", 'centered'):
-        if bak:
-            import shutil
-            shutil.copy(fname, fname + ".bak")
-            printit(f"File: {fname} has been backed up to: {fname}.bak", 'centered')
-        if not id_flag:
-            data  = [row[1:] for row in data]  # strip off hdr (firstline)
-            # if not askYN("Do you want to include the 'id' column? ", "n"):
-        with open(writefile, "w") as f:
-            if len(hdr_comment) > 0:
-                f.write(hdr_comment)
-            if len(comment_lines) > 0:
-                f.write(comment_lines)
-            wr = csv.writer(f)
-            wr.writerows(data)
-        printit(f"The file fname: {fname} has be re-written...", 'centered')
-        return data
-    else:  # the answer was not "y"
-        printit(f"Not writing out to fname: {fname}... returning...", 'centered')
+    # writefile = fname
+    data_lines = []
+    csv_lines = []      # this will become a list of comma delimited strings/lines and will include a header string/line as the first line
+    content_lines = []  # lines read from the file (if it exists) - all non-comment lines
+    comment_lines = []  # comments lines read from the file if it exists
+    file_type = "csv"   # this will either be a 'csv' or a 'dat' based on file name extension
+    """--== Convert ==--"""
+    if isinstance(data, str):
+        # dbug(f"Converting a data if str into a list... data: {data}")
+        data = [data]
+    for row in data:
+        # dbug(row)
+        if isinstance(row, list):
+            if isinstance(row, list):
+                row = comma_join(row)
+        csv_lines.append(row)
+    if isinstance(colnames, list) and colnames != []:
+        # colnames was given
+        dbug(colnames)
+        hdr_line = comma_join(colnames)
+        # data.insert(0, ", ".join(colnames))
+    """--== Validate ==--"""
+    if not isinstance(colnames, list):
+        dbug("Colnames must be a list ... colnames: {colnames} ... returning...")
         return
+    if islol(data):
+        # dbug(data)
+        for row in data:
+            # dbug(row)
+            new_row = comma_join(row)
+            # dbug(new_row)
+            data_lines.append(new_row)
+    else:
+        dbug("Data is not a list of lists and it should be. data: {data}")
+        return
+    if len(data[0]) < 2:  # arbitrary
+        dbug("Data should have more content: {data[:3]}")
+        return
+    """--== Init ==--"""
+    if file_exists(fname):
+        # content_lines = cat_file(fname, 'lst')
+        with open(fname, "r") as f:
+            lines = f.readlines()
+            for ln in lines:
+                ln = ln.rstrip("\n")
+                if ln.startswith("#"):
+                    comment_lines.append(ln)
+                content_lines.append(ln)
+    if not append_b:
+        dbug(data_lines)
+    if fname.endswith(".dat"):
+        file_type = "dat"
+        hdr_line = content_lines[0].lstrip("#")
+        data_lines = data_lines[1:]
+    else:
+        hdr_line = content_lines[0]
+    #### test hdr_line?? ###
+    # TODO deal with id vs no_id: id_flag
+    # dbug(file_type)
+    # dbug(hdr_line)
+    # dbug(comment_lines)
+    # dbug(data_lines)
+    # dbug(content_lines)
+    # dbug(csv_lines)
+    """--== WIP below ==--"""
+    # are we ready to write out the file
+    # cp file first
+    if bak:
+        import shutil
+        bak_fname = fname + ".bak"
+        if file_exists(bak_fname):
+            shutil.copy(bak_fname, fname + ".prev")
+        shutil.copy(fname, fname + ".bak")
+        printit(f"File: {fname} has been backed up to: {fname}.bak", 'centered')
+    if append_b:
+        # do_append_file()
+        with open(fname, "a") as f:
+            for ln in data:
+                if not ln.endswith("\n"):
+                    ln += "\n"
+                f.write(ln)
+    else:
+        # do_write_file()
+        # either creates a new file or overwites existing file - above is for appending
+        new_lines = []
+        if file_type == "dat":
+            dbug(hdr_line)
+        for ln in comment_lines:
+            new_lines.append(ln)
+        for ln in data_lines:
+            new_lines.append(ln)
+        """--== SEP_LINE ==--"""
+        dbug(new_lines, 'lst')
+        """--== SEP_LINE ==--"""
+        dbug('ask')
+        with open(fname, "w") as f:
+            for ln in new_lines:
+                if isinstance(ln, list):
+                    ln = comma_join(ln)
+                if not ln.endswith("\n"):
+                    ln += "\n"
+                f.write(ln)
+    if prnt:
+        printit(f"The file fname: {fname} has be re-written...", 'centered')
+    return data
     # ### EOB def write_file() ### #
-
 
 
 # #############################
@@ -531,7 +591,6 @@ def transcript_demo():
     printit(contents)
 
 
-
 # #######################################
 class ThreadWithReturn(threading.Thread):
     # ###################################
@@ -552,8 +611,10 @@ class ThreadWithReturn(threading.Thread):
     def __init__(self, *init_args, **init_kwargs):
         threading.Thread.__init__(self, *init_args, **init_kwargs)
         self._return = None
+        """--== SEP_LINE ==--"""
     def run(self):
         self._return = self._target(*self._args, **self._kwargs)
+        """--== SEP_LINE ==--"""
     def join(self):
         threading.Thread.join(self)
         return self._return
@@ -588,52 +649,52 @@ class ThreadWithReturn(threading.Thread):
 #         self.cls = False
 #         self.center = True
 #
-    def add_selection(self, selection):
-        """
-        selection needs to be a dictionary element ie:
-          {"get this done":do_it} where do_it is actually a function name
-        """
-        # dbug(f"selection:{selection}")
-        if not isinstance(selection, dict):
-            dbug("Selection: " + selection + "must be a dictionary")
-        self.selections.update(selection)
-    """--== SEP_LINE ==--"""
-    def do_select(self):
-        if self.cls:
-            cls()
-        cnt = 0
-        # dbug(f"self.itms:{self.itms}")
-        # dbug(f"self.selections:{self.selections}")
-        mmax = max(self.selections)
-        mmax_len = len(mmax)
-        side_len = mmax_len / 2
-        position = int((self.length + 2) / 2 - side_len)
-        # dbug(f"mmax:{mmax} mmax_len:{mmax_len} side_len:{side_len} position:{position}")  # noqa:
-        do_title_three_line(self.name, self.length)
-        # do_line("=",self.length)
-        # do_title(self.name,"+",self.length)
-        # do_line("=",self.length)
-        #
-        self.add_selection({"Quit [Qq] or blank": exit})
-        for k, v in self.selections.items():
-            cnt += 1
-            print(f"{cnt:{position}} {k}")
-            # print("{:position}} {}".format(cnt, k))
-            # dbug(f"k:{k} v:{v}")
-            self.choices.update({str(cnt): v})
-        doline("=", self.length)
-        # prompt = input(f"Please make your selection [q=quit or 1-{cnt}]: ")
-        prompt = input("Please make your selection [q=quit or 1-{}]: ".format(cnt))
-        ans = input(centered(prompt, self.length))
-        doline("=", self.length)
-        # dbug(f"Selected: {ans} Action: {self.choices[ans]}")
-        # dbug(f"self.choices:{self.choices}")
-        if ans in ("q", "Q", ""):
-            sys.exit()
-        ret = self.choices[ans]()
-        # dbug(f"returning ret: {ret}")
-        return ret
-    # EOB class DoMenu:
+#    def add_selection(self, selection):
+#        """
+#        selection needs to be a dictionary element ie:
+#          {"get this done":do_it} where do_it is actually a function name
+#        """
+#        # dbug(f"selection:{selection}")
+#        if not isinstance(selection, dict):
+#            dbug("Selection: " + selection + "must be a dictionary")
+#        self.selections.update(selection)
+#    """--== SEP_LINE ==--"""
+#    def do_select(self):
+#        if self.cls:
+#            cls()
+#        cnt = 0
+#        # dbug(f"self.itms:{self.itms}")
+#        # dbug(f"self.selections:{self.selections}")
+#        mmax = max(self.selections)
+#        mmax_len = len(mmax)
+#        side_len = mmax_len / 2
+#        position = int((self.length + 2) / 2 - side_len)
+#        # dbug(f"mmax:{mmax} mmax_len:{mmax_len} side_len:{side_len} position:{position}")  # noqa:
+#        do_title_three_line(self.name, self.length)
+#        # do_line("=",self.length)
+#        # do_title(self.name,"+",self.length)
+#        # do_line("=",self.length)
+#        #
+#        self.add_selection({"Quit [Qq] or blank": exit})
+#        for k, v in self.selections.items():
+#            cnt += 1
+#            print(f"{cnt:{position}} {k}")
+#            # print("{:position}} {}".format(cnt, k))
+#            # dbug(f"k:{k} v:{v}")
+#            self.choices.update({str(cnt): v})
+#        doline("=", self.length)
+#        # prompt = input(f"Please make your selection [q=quit or 1-{cnt}]: ")
+#        prompt = input("Please make your selection [q=quit or 1-{}]: ".format(cnt))
+#        ans = input(centered(prompt, self.length))
+#        doline("=", self.length)
+#        # dbug(f"Selected: {ans} Action: {self.choices[ans]}")
+#        # dbug(f"self.choices:{self.choices}")
+#        if ans in ("q", "Q", ""):
+#            sys.exit()
+#        ret = self.choices[ans]()
+#        # dbug(f"returning ret: {ret}")
+#        return ret
+#    # EOB class DoMenu:
 
 
 # ### FUNCTIONS ### #
@@ -663,6 +724,10 @@ def ddbug(msg="", *args, ask=False, exit=False):
     """
     purpose: this is for use by dbug only... as dbug can't call itself
     """
+    """--== Debugging ==--"""
+    # print(f"funcname: {funcname()}")
+    # print(f"ask: {ask}")
+    """--== SEP_LINE ==--"""
     # dbug = DBUG if DBUG else 1
     # my_centered = True if 'center' in args else False
     # my_centered = True if 'centered' in args else centered
@@ -687,8 +752,10 @@ def ddbug(msg="", *args, ask=False, exit=False):
         print(f"print({msg}) failed Error: {e}")
         print(msg)
     if ask:
-        from gtools import askYN
-        askYN()
+        # from gtools import askYN
+        ans = input("Do you want to exit? ")
+        if ans in ("y", "Y", "yes", "Yes"):
+            sys.exit()
     if exit:
         sys.exit()
     return msg
@@ -726,7 +793,8 @@ def dbug(xvar="", *args, exit=False, ask=False, prnt=True, **kwargs):
     center = bool_val(['center', 'centered'], args, kwargs)
     box = bool_val(['box', 'boxed'], args, kwargs, dflt=False)
     color = kvarg_val('color', kwargs, dflt='')
-    box_color = kvarg_val('box_color', kwargs, dflt="red! on black")
+    # box_color = kvarg_val('box_color', kwargs, dflt="red! on black")
+    box_color = kvarg_val('box_color', kwargs, dflt="white! on red")
     # if 'center' in args or 'centered' in args:
     #     center = True
     DBUG = kvarg_val(['dbug', 'DBUG'], kwargs, dflt=True)  # True unless specified as False
@@ -742,9 +810,11 @@ def dbug(xvar="", *args, exit=False, ask=False, prnt=True, **kwargs):
     ask_b = bool_val('ask', args, kwargs, dflt=False)
     lineno_b = bool_val(['lineno_b', 'lineno', 'line_no', 'line_number'], args, kwargs, dflt=False)
     here_b = bool_val('here', args, kwargs, dflt=False)
+    # title = kvarg_val("title", kwargs, dflt="")
+    # footer = kvarg_val("footer", kwargs, dflt="")
     list_b = bool_val(["lst", "list"], args, kwargs, dflt=False)  # print the list in lines if xvar contains a list (like printit for dbug)
-    titled = bool_val("titled", args, kwargs, dflt=False)  # consider making this the default - this puts the title=debug_info in the box
-    footered = bool_val(["footered", "footerred"], args, kwargs, dflt=False)
+    titled = bool_val("titled", args, kwargs, dflt=True)  # consider making this the default - this puts the title=debug_info in the box
+    footered = bool_val(["footered", "footerred"], args, kwargs, dflt=False)  # yes, this is footerred <-- TODO probably need to change or eliminate this
     """--== Init ==--"""
     # title = ""
     # footer = ""
@@ -779,9 +849,9 @@ def dbug(xvar="", *args, exit=False, ask=False, prnt=True, **kwargs):
     # ie eg:  <frame at 0x7f4d6e4b25e0, file '/home/geoffm/././t.py', line 3000, code tdbug>
     frame = inspect.currentframe().f_back
     def do_prnt(rtrn_msg, *args, ask=ask_b, **kwargs):  # , ask=ask_b, centered=centered):
-        titled = bool_val("titled", args, kwargs, dflt=False)
+        titled = bool_val("titled", args, kwargs, dflt=True)
         footered = bool_val("footered", args, kwargs, dflt=False)
-        title = kvarg_val("title", kwargs, dflt="")
+        # title = kvarg_val("title", kwargs, dflt="")
         footer = kvarg_val("footer", kwargs, dflt="")
         to_prnt = f"{rtrn_msg}"
         # ddbug(rtrn_msg)
@@ -791,11 +861,16 @@ def dbug(xvar="", *args, exit=False, ask=False, prnt=True, **kwargs):
         # to_prnt = f"DEBUG: [{filename}:{fname}:{lineno}] {rtrn_msg} {msg_literal}:"
         # ddbug(f"to_prnt: {to_prnt}")
         if box:
+            # dbug(f"titled: {titled}")
             if titled or footered:
                 phrases = to_prnt.split(']')
                 # ddbug(f"phrases: {phrases}")
                 if titled:
-                    title = phrases[0] + "] " + msg_literal + ": "
+                    # ddbug(titled)
+                    my_title = phrases[0] + "]"
+                    # ddbug(f"phrases: {phrases}")
+                    # ddbug(f"phrases[0]: {phrases[0]}")
+                    # ddbug(f"my_title: {my_title}")
                     to_prnt = phrases[1]
                     # ddbug(f"to_prnt: {to_prnt}")
                     # this is such a kludge ... arghhh TODO !!!!!
@@ -812,7 +887,7 @@ def dbug(xvar="", *args, exit=False, ask=False, prnt=True, **kwargs):
                 if footered:
                     footer = phrases[0] + "]"
                     to_prnt = phrases[1]
-            to_prnt = boxed(to_prnt, color=color, box_color=box_color, title=title, footer=footer)
+            to_prnt = boxed(to_prnt, color=color, box_color=box_color, title=my_title, footer=footer)
         if center:
             # num_rows, columns = os.popen("stty size", "r").read().split()
             # lfill = (int(columns) - len(to_prnt)) // 2
@@ -828,8 +903,10 @@ def dbug(xvar="", *args, exit=False, ask=False, prnt=True, **kwargs):
         else:
             print(f"{to_prnt}")
         if ask_b:
+            # ddbug(f"ask_b: {ask_b}")
             if not askYN("Continue?: ", "y", centered=center):
                 sys.exit()
+            # ddbug('ask')
         if EXIT:
             sys.exit()
         # title = kvarg_val('title', kvargs, "")
@@ -847,14 +924,17 @@ def dbug(xvar="", *args, exit=False, ask=False, prnt=True, **kwargs):
         if not askYN(to_prnt):
             sys.exit()
         return
-    try:
-        import pyparsing as pp
-        all_args = pp.commaSeparatedList.parseString(msg_literal).asList()
-        msg_literal = all_args[0]
-        import abracadabra
-    except Exception as Error:
-        all_args = msg_literal.split(",")
-        msg_literal = all_args[0]
+    # try:
+    #     ddbug(f"msg_literal: {msg_literal}")
+    #     # import pyparsing as pp
+    #     all_args = pp.commaSeparatedList.parseString(msg_literal).asList()
+    #     msg_literal = all_args[0]
+    #     ddbug(f"msg_literal: {msg_literal} all_args: {all_args}")
+    #     # import abracadabra
+    # except Exception as Error:
+    all_args = msg_literal.split(",")
+    msg_literal = all_args[0]
+    """--== SEP_LINE ==--"""
     lvars = inspect.currentframe().f_back.f_locals
     # ddbug(f"msg_literal: {msg_literal}")
     if msg_literal.startswith('f"') or msg_literal.startswith("f'"):
@@ -875,10 +955,11 @@ def dbug(xvar="", *args, exit=False, ask=False, prnt=True, **kwargs):
         if msg_literal == k or found:  # in loop below we might break out and miss testing if in lvars hence the found value
             # ddbug(f"looks like msg_literal: {msg_literal} == k: {k}")
             try:
-                if "\n" in str(xvar) and lst_b:
+                if "\n" in str(xvar) and list_b:
                     xvar = xvar.split("\n")
                     xvar = [x for x in xvar if x != ""]
-            except:
+            except Exception as Error:
+                ddbug(f"Error: {Error}")
                 pass
             # so this is in the local vars so lets build it as a string
             # ddbug(f"msg_literal: {msg_literal} xvar: {xvar}")
@@ -916,7 +997,7 @@ def dbug(xvar="", *args, exit=False, ask=False, prnt=True, **kwargs):
                     xvar = lines0
                     # ddbug(f"xvar: {xvar}")
                     # for ln in xvar:
-                        # ddbug(f"ln: {ln}")
+                    #     ddbug(f"ln: {ln}")
                     if list_b:
                         xvar = "\n" + "\n".join(xvar)
                     # ddbug(xvar)
@@ -995,7 +1076,7 @@ def dbug(xvar="", *args, exit=False, ask=False, prnt=True, **kwargs):
                 return
         except Exception as Error:
             rtrn_msg = f"{msg_literal}: {xvar}"
-            ddbug(rtrn_msg)
+            ddbug(f"rtrn_msg: {rtrn_msg} Error: {Error}")
             do_prnt(rtrn_msg, args, ask=ask_b, footered=footered, titled=titled)
             return
         return
@@ -1054,18 +1135,19 @@ def dbug_demo():
     dbug(type(['one', 'two', 'three']), 'ask')
     print("-" * 40)
 
-# #################
-def funcname(n=0):
-    # #############
-    """
-    Use: eg:
-    from dbug import dbug, fname
-    def myfunc():
-        dbug(f"This is function name: {funcname()}")
-        pass
-    """
-    # using this sys method is faster than inspect methods
-    return sys._getframe(n + 1).f_code.co_name
+
+# # #################
+# def funcname(n=0):
+#     # #############
+#     """
+#     Use: eg:
+#     from dbug import dbug, fname
+#     def myfunc():
+#         dbug(f"This is function name: {funcname()}")
+#         pass
+#     """
+#     # using this sys method is faster than inspect methods
+#     return sys._getframe(n + 1).f_code.co_name
 
 
 # #######################################
@@ -1076,7 +1158,7 @@ def gselect(selections, *args, **kwargs):
     required:
     - selections: list or dictionary
     options:
-        - prompt: str # no need to include ": " 
+        - prompt: str # no need to include ": "
     - rtrn=''     # can be 'k|key' or 'v|val|value' or "i" | "int" <-- tells gselect whether you want it to return a key or a value from a supplied list or dictionary or just user input (default)
                   # if "i"|"int" is invoked then the value of the key will return as an integer (as opposed to a string)
             This is an important option and allows control over what gets returned. See the Notes below.
@@ -1094,7 +1176,11 @@ def gselect(selections, *args, **kwargs):
     - box_color
     - width
     returns: str | list  -- either key(s) or value(s) as a *string* <---IMPORTANT  or list (if multiple), your choice
-    Notes:  with a simple list by default it will return the value in the list - if you want the menu number then use rtrn='k' option!!!
+    Notes:
+        - to understand this function know first that everything is turned into a dictionary first. A list would become a dictionary with  the keys being 1,2,3...
+        while the original list would become the keys - this understanding will help with determining the rtrn and show options (key | val)
+        - a dictionary remains as keys and values
+        - with a simple list by default it will return the value in the list - if you want the menu number then use rtrn='k' option!!!
     examples:
     > tsts = [{1: "one", 2: "two", 3: "three"},["one", "two", "three"], {"file1": "path/to/file1", "file2": "path/to/file2"} ]
     > for tst in tsts:
@@ -1108,11 +1194,14 @@ def gselect(selections, *args, **kwargs):
     # dbug(kwargs)
     """--== Config ==--"""
     prompt = kvarg_val("prompt", kwargs, dflt="Please select")
-    center = bool_val(["center", "centered"], args, kwargs, dflt=False)
+    centered_b = bool_val(["center", "centered"], args, kwargs, dflt=False)
+    # dbug(centered_b)
+    shift = kvarg_val(["shift", "shft"], kwargs, dflt=0)  # only works with centered option
     title = kvarg_val("title", kwargs, dflt=" Selections ")
     footer = kvarg_val("footer", kwargs, dflt="")
     # dbug(footer)
     default = kvarg_val(["dflt", "default"], kwargs, dflt="")
+    # dbug(default)
     width = kvarg_val(["width", "w", "length", "len", "l"], kwargs, dflt=0)
     # dbug(width)
     box_color = kvarg_val(["box_color"], kwargs, dflt="bold white on rgb(60,60,60)")
@@ -1120,7 +1209,8 @@ def gselect(selections, *args, **kwargs):
     sep = kvarg_val(["sep"], kwargs, dflt=" | ")
     color = kvarg_val(["color"], kwargs, dflt="white on rgb(20,20,30)")
     quit = bool_val(["quit", "exit"], args, kwargs, dflt=False)
-    rtrn = kvarg_val(["return", "rtrn"], kwargs, dflt="")  # can be key|k or value|v|val or ''
+    # dbug(kwargs)
+    rtrn = kvarg_val(["rtrn"], kwargs, dflt="v")  # can be key|k or value|v|val or ''
     show = kvarg_val(['show', 'show_type', 'shw', 'shw_type'], kwargs, dflt="k")
     indx = bool_val(["indx", "idx", "index", "indexes"], args, kwargs, dflt=True)
     # index = bool_val(['index', 'idx'], args, kwargs, dflt=True)
@@ -1139,6 +1229,7 @@ def gselect(selections, *args, **kwargs):
     rtrn_ans = ""
     keys = []
     vals = []
+    dict_submitted = False
     """--== Convert ... Type Mngmt ==--"""
     " we will turn a list into a dict "
     if isinstance(selections, list):
@@ -1149,16 +1240,19 @@ def gselect(selections, *args, **kwargs):
             selections_d[f"{str(n):>{num_len}} {elem}"] = elem
             keys.append(str(n))
             vals.append(elem)
-    # dbug(selections_d)
     if isinstance(selections, dict):
         # dbug(selections)
+        dict_submitted = True
         n = 1
         for k, v in selections.items():
-            # dbug(f"n: {n} k: {k} v: {v}")
+            # dbug(f"n: {n} k: {k} v: {v} show: {show} rtrn: {rtrn}")
             if show in ("v", "val", "value", "values"):
+                # dbug(show)
+                # dbug(selections)
                 selections_d[k] = v
             else:
                 if rtrn in ("v", "val", "value", "values"):
+                    # dbug(indx)
                     if indx:
                         selections_d[f"{n:>3}). {k}"] = k
                     else:
@@ -1179,7 +1273,10 @@ def gselect(selections, *args, **kwargs):
     """--== Process ==--"""
     for k, v in selections_d.items():
         # lines is choices
-        lines.append(k)
+        if show in ("v", "val", "value", "values"):
+            lines.append(v)
+        else:
+            lines.append(k)
     # dbug(lines)
     if cols > 0:
         # dbug(cols)
@@ -1197,6 +1294,7 @@ def gselect(selections, *args, **kwargs):
     if default != "":
         prompt += f" default: [{default}] "
     prompt += ": "
+    """--== SEP_LINE ==--"""
     # dbug(f"multi: {multi} default: {default}")
     # dbug(lines)
     if multi:
@@ -1208,10 +1306,12 @@ def gselect(selections, *args, **kwargs):
             if footer == "":
                 footer = " Please add selections one at a time. "
             # display_selections(lines)
-            # printit(lines, 'boxed', center=center, box_color=box_color, color=color, title=title, footer=prompt + dbug('here'))
-            printit(lines, 'boxed', center=center, box_color=box_color, color=color, title=title, footer=footer)
-            if center:
-                ans = cinput(prompt, center=center, quit=quit)
+            # printit(lines, 'boxed', center=centered_b, box_color=box_color, color=color, title=title, footer=prompt + dbug('here'))
+            # dbug(centered_b)
+            printit(lines, 'boxed', center=centered_b, box_color=box_color, color=color, title=title, footer=footer)
+            if centered_b:
+                dbug(centered_b)
+                ans = cinput(prompt, center=centered_b, shift=shift, quit=quit)
             else:
                 ans = input(prompt)
                 if ans in ("q", "Q", "exit", ""):
@@ -1234,26 +1334,39 @@ def gselect(selections, *args, **kwargs):
             selected_l.append(ans)
         # dbug(f"Returning: {selected_l}")
         return selected_l
+        """--== EOB while ... multi ... ==--"""
     else:
+        """--== not multi selection ==--"""
         # dbug(lines)
-        printit(lines, 'boxed', center=center, box_color=box_color, color=color, title=title, footer=footer)
+        # dbug(centered_b)
+        printit(lines, 'boxed', centered=centered_b, box_color=box_color, color=color, title=title, footer=footer)
         # now get input with prompt
-        if center:
-            ans = cinput(prompt, center=center, quit=quit) or default
+        if centered_b:
+            # dbug(centered_b)
+            ans = cinput(prompt, shift=shift, quit=quit) or default
         else:
+            # dbug(centered_b)
             ans = input(prompt) or default
-        # if ans == "":
-            # ans = default
         orig_ans = ans
+    # dbug(f"ans: {ans} rtrn: {rtrn} selections_d: {selections_d} keys: {keys} vals: {vals}")
     rtrn_ans = ans
     # dbug(repr(ans))
     if quit and ans in ("q", "Q", "quit", "Quit", "exit"):
         sys.exit()
-    if not isnumber(ans):
+    if (not isnumber(ans) and rtrn == "v") or (ans not in keys and ans not in vals):
+        if not indx:
+            # dbug(f"ans: {ans} rtrn: {rtrn}\nselections_d: {selections_d}\nkeys: {keys}\nvals: {vals}")
+            # this allows a pass-through for what might be considered an invaldid ans - developer can use this feature or code for it
+            # dbug(f"Returning ans: {ans}")
+            return ans
+    # dbug(f"ans: {ans} rtrn: {rtrn}" )
+    # dbug(vals)
+    # dbug(keys)
+    if str(ans) not in keys and not dict_submitted:
         # dbug(f"Returning ans: {ans}")
         return ans
-    # dbug(ans)
-    ans = int(ans) - 1
+    if isnumber(ans):
+        ans = int(ans) - 1
     # dbug(ans)
     if rtrn in ("k", "key", "keys"):
         # dbug(ans)
@@ -1262,11 +1375,20 @@ def gselect(selections, *args, **kwargs):
         # dbug(vals)
         # dbug(keys)
         # dbug(ans)
-        if str(ans+1) not in keys and str(ans) not in vals:
-            rtrn_ans = orig_ans
+        if isnumber(ans) and (str(ans+1) not in keys and str(ans) not in vals):
+            # dbug(f"ans: {ans} keys[ans]: {keys[ans]}")
+            if isnumber(keys[ans]):
+                # dbug(vals[ans])
+                # dbug(orig_ans)
+                rtrn_ans = orig_ans
+            else:
+                rtrn_ans = vals[ans]
         else:
             # dbug(vals[ans])
-            rtrn_ans = vals[ans]
+            if isnumber(ans):
+                rtrn_ans = vals[ans]
+            else:
+                rtrn_ans = ans
     # dbug(f"Returning rtrn_ans: {rtrn_ans}")
     if rtrn in ("i", "int"):
         if isnumber(rtrn_ans):
@@ -1282,9 +1404,14 @@ def gselect_demo():
     """
     cls()
     """--== SEP_LINE ==--"""
+    mrkt_syms_d = {'S&P': '^GSPC', 'DOW': '^DJI', 'NASDAQ': '^IXIC', 'Russel2k': '^RUT', "Crude": 'CL=F', 'Gold': 'GC=F',
+                   'Silver': 'SI=F', 'EURUSD': 'EURUSD=X', '10yr': '^TNX', 'GBP/USD': 'GBPUSD=X', 'USD/JPY': 'JPY=X'}
+    ans = gselect(mrkt_syms_d, 'centered', 'quit', rtrn="v", cols=4, title="rtrn='v'", footer=dbug('here'))
+    dbug(ans, 'ask')
+    """--== SEP_LINE ==--"""
     simple_list = ["Select me", "No, please select me", "Select me and I will bring you happiness!"]
     ans = gselect(simple_list, title="Vertical Listing")
-    dbug(f"You selected ans: {ans}", 'ask')
+    dbug(f"You selected this: {ans}", 'ask')
     """--== SEP_LINE ==--"""
     simple_list = ["Select me", "No, please select me", "Select me and I will bring you happiness!"]
     ans = gselect(simple_list, cols=len(simple_list), title="Horizontal Listing")
@@ -1310,12 +1437,12 @@ def gselect_demo():
     my_l = list_files("./", "*.*")
     my_l = my_l[:3]
     msg = f"my_l: {my_l} rtrn='k' length=220"
-    printit(f"Using " + msg)
-    ans = gselect(my_l, length = 220, title=msg, footer=dbug('here'), quit=True, rtrn='k')
+    printit("Using " + msg)
+    ans = gselect(my_l, length=220, title=msg, footer=dbug('here'), quit=True, rtrn='k')
     dbug(f"Your ans: {ans}", 'boxed')
     """--== SEP_LINE ==--"""
     msg = f"my_l: {my_l} rtrn='v' (default) width=40"
-    printit(f"Using " + msg)
+    printit("Using " + msg)
     printit(f"Using a simple list: {my_l[:3]} for gselect; center the display and offer q)uit as part of the prompt", 'centered')
     ans = gselect(my_l, 'centered', 'quit', rtrn="v", title="Example of gselect using a simple list", footer=dbug('here'))
     dbug(f"Your ans: {ans}", 'boxed')
@@ -1398,7 +1525,7 @@ def gselect_demo():
 
 
 # #######################################
-def kvarg_val(key, kwargs_d={}, *args, dflt="", **kwargs):
+def kvarg_val(key, kwargs_d={}, *args, **kwargs):
     # ###################################
     """
     purpose: returns a value when the key in a key=value pair matches any key given
@@ -1423,21 +1550,25 @@ def kvarg_val(key, kwargs_d={}, *args, dflt="", **kwargs):
         return default
     returns str(key_val) or default_val(which is "" if none is provided)
     """
-    """--== debugging ==--"""
-    # dbug(funcname)
-    # ddbug(f"kwargs_d: {kwargs)}")
-    # dbug(default)
-    """--== Config ==--"""
+    """--== Debugging ==--"""
+    # print(f"funcname: {funcname()}")
+    # print(f"args: {args}")
+    # print(f"kwargs: {kwargs}")
+    # print(f"key: {key}")
+    # print(f"kwargs_d: {kwargs_d}")
+    """--== Init ==--"""
     required = False
     if "required" in args:
         required = True
     if 'required' in list(kwargs.keys()):
         required = True
+    mydflt = ""
+    if 'dflt' in kwargs:
+        mydflt = kwargs['dflt']
+        # ddbug(f"dflt: {mydflt}")
+        # print(f"dflt: {mydflt} this is in kvarg_val()")
     """--== Validate ==--"""
-    # how can I protect against this mistake res = kvarg_val("result", args, kwargs, dflt="Whatever")
-    # the problem is the user included args (like bool_val needs)
-    # maybe a wrapper script to test?
-    # ### Experimental ### #
+    # ### required option ### #
     if required:
         # dbug(key)
         # dbug(kwargs_d)
@@ -1451,30 +1582,21 @@ def kvarg_val(key, kwargs_d={}, *args, dflt="", **kwargs):
 
             # dbug(f"Required: [{required}] is experimental but was apparently not included")
             # dbug(f"A value for a key: {key} is required for this operation.", 'ask', 'boxed')
+    # if 'rtrn' in key:
+        # ddbug(f"kwargs_d: {kwargs_d}")
     """--== Init ==--"""
-    my_val = ""
-    my_default = ""
+    # my_val = ""
+    my_val = mydflt
+    # my_default = ""
     if not isinstance(kwargs_d, dict):
         dbug(f"Supplied kwargs_d: {kwargs_d} MUST be a dictionary! Returning...")
         return
-    if 'dflt' in kwargs_d:
-        # dbug(f"found dflt in kwargs_d: {kwargs_d} ")
-        # dbug(type(kwargs_d))
-        # dbug(f"setting my_default to: {kwargs_d['dflt']} ")
-        my_default = kwargs_d['dflt']
-    #if 'default' in kwargs_d:
-    #    # dbug(f"found default in kvargs_d: {kvargs_d} setting my_default to: {kvargs_d['default']} ")
-    #    my_default = kwargs_d['default']
-    # if default != "":
-    #     my_default = default
-    if dflt != "":
-        my_default = dflt
-    my_val = my_default
-    # dbug(f"key: {key} kvargs_d: {kvargs_d} my_default: {my_default} <-------------------------------------------")
+    """--== Convert ==--"""
     if isinstance(key, list):
         keys = key
     else:
         keys = [key]
+    """--== Process ==--"""
     for k in keys:
         # dbug(keys)
         # dbug(k)
@@ -1483,79 +1605,93 @@ def kvarg_val(key, kwargs_d={}, *args, dflt="", **kwargs):
             # dbug(type(k))
             # dbug(f"k: {k} is in kvargs_d: {kvargs_d}")
             my_val = kwargs_d[k]
-    # dbug(f"Returning my_val: {my_val} <=================")
+    # print(f"Returning my_val: {my_val}")
+    # ans = input("Hit anything this is the end of lvarg_val()")
     return my_val
-    # ### EOB def kvarg_val(key, kwargs_d={}, dflt=""): ### #
+    # ### EOB def kvarg_val(key, kwargs_d={}): ### #
+
+
+def kvarg_val_demo():
+    """
+    WIP
+    """
+    print("We are starting kvarg_val_demo...")
+    kwargs = {'tst': "This is a test"}
+    keys = ["tst", "test"]
+    dflt = "this is mydefault"
+    print(f"Sending keys: {keys}, kwargs: {kwargs}, and dflt={dflt}")
+    my_tst = kvarg_val(keys, kwargs, dflt="")
+    # dbug(f"my_tst: {my_tst}")
+    print("-" * 40)
+    """--== SEP_LINE ==--"""
+    kwargs = {'xtst': "This is a test"}
+    keys = ["tst", "test"]
+    dflt = ""
+    print(f"Sending keys: {keys}, kwargs: {kwargs}, and dflt={dflt}")
+    my_tst = kvarg_val(keys, kwargs, dflt=dflt)
+    dbug(f"my_tst: {my_tst}")
+    print("-" * 40)
+    """--== SEP_LINE ==--"""
+    kwargs = {'xtst': "This is a test"}
+    kwargs = {'xtst': "This is a test"}
+    keys = ["tst", "test"]
+    dflt = "The default here"
+    print(f"Sending keys: {keys}, kwargs: {kwargs}, and dflt={dflt}")
+    my_tst = kvarg_val(keys, kwargs, dflt=dflt)
+    dbug(f"my_tst: {my_tst}")
+    print("-" * 40)
 
 
 # ###########################################
-def bool_val(s, args_l, kvargs={}, **kwargs):
+def bool_val(key_l, args_l, kvargs={}, **kwargs):
     # #######################################
     """
     purpose: look at args and kwargs with a list of possible option strings and return the default True or False
     requires:
-        - s: str | list  # this is the string or list of strings to check args and kwargs against
+        - key_l: str | list  # this is the string or list of strings to check args and kwargs against
     options:
         - default | dflt: bool  # the default value to return
         - opposite | opposites: str | list  # a list of opposites
             eg: prnt = bool_val(["print", "prnt"], args, kwargs, dflt=True, opposites=['noprnt', 'no_prnt', 'no_print'])
     return True or False
     Notes:
-        s can be a str or list
+        key_l can be a str or list
         args_l must be provided
         kvargs is optional
         used to see if a string or a list of stings might be declared true
-        by being in args or seeing it has a bool value set in kvargs
-        return: bool_val (False unless stipulated to be otherwise or declared in kwargs with 'dflt' or 'default')
+            by being in args or seeing it has a bool value set in kvargs
     use:
         DBUG = bool_val('dbug', args, kvargs)
         or
         DBUG = bool_val(['dbug', 'DBUG'], args, kvargs)
     """
-    """--== debugging ==--"""
+    """--== Debugging ==--"""
     # dbug(funcname())
-    # dbug(f"s: {s} args_l: {args_l} kvargs: {kvargs} kwargs: {kwargs}")
-    # Keep in mind kvargs are the kwargs that came from the calling function - not this functions kwargs!
     """--== Config ==--"""
     bool_v = kvarg_val(["default", "dflt"], kwargs, dflt=False)
-    # ddbug(f"default for bool_v: {bool_v}")
     opposite_words = kvarg_val(['opposite', 'opposites'], kwargs, dflt=[])
+    """--== Validate ==--"""
+    if not isinstance(opposite_words, list) and opposite_words != []:
+        # ddbug(f"opposite_words: {opposite_words} needs to be a list")
+        opposite_words = [opposite_words]
     """--== Convert ==--"""
-    if isinstance(s, str):
-        s_l = [s]  # make it a list
-    if isinstance(s, list):
-        s_l = s
-    # if isinstance(opposite_words, str):
-        # opposite_words = [opposite_words]
-    """--== Process ==--"""
-    # dbug(s_l)
-    # bool_val = False
-    # if "default" in kwargs:
-    #     bool_val = kwargs['default']
-    # if "dflt" in kwargs:
-    #     bool_val = kwargs['dflt']
-    # dbug(f"bool_v s: {s}: args: {args_l} kwargs: {kwargs}")  # for debugging
-    for s in s_l:
-        # dbug(f"s: {s} args_l: {args_l} kvargs: {kvargs}")
-        if s in args_l:
-            bool_v = True
-        if s in kvargs:
-            # ddbug(s)
-            # ddbug(kvargs[s])
-            # if isinstance(kvargs[s], bool):
-                # bool_v = kvargs[s]
-            bool_v = kvargs[s]
+    if isinstance(key_l, str):
+        key_l = [key_l]  # make it a list
+    """--== Init ==--"""
     opposite_b = False
+    """--== Process ==--"""
+    for key in key_l:
+        # dbug(f"s: {s} args_l: {args_l} kvargs: {kvargs}")
+        if key in args_l:
+            bool_v = True
+        if key in kvargs:
+            bool_v = kvargs[key]
     for word in opposite_words:
-        # dbug(f"word: {word} opposite_words: {opposite_words} args_l: {args_l} kvargs: {kvargs}")
         if word in args_l:
             opposite_b = True
-            # dbug(f"word: {word} opposite_b: {opposite_b}")
         if word in kvargs:
             if isinstance(kvargs[word], bool):
                 opposite_b = kvargs[word]
-            # dbug(f"word: {word} opposite_b: {opposite_b}")
-    # dbug(opposite_b)
     if opposite_b:
         bool_v = False
     # dbug(f"Returning bool_v: {bool_v}")
@@ -1564,7 +1700,6 @@ def bool_val(s, args_l, kvargs={}, **kwargs):
 
 def cfg_val(keys, section, cfg_d, dflt=""):
     """
-    WIP TODO
     purpose: to retrieve cfg val while allowing diffent key name request to get a specifi key
     options:
     returns: value
@@ -1577,10 +1712,10 @@ def cfg_val(keys, section, cfg_d, dflt=""):
         keys = [keys]
     # dbug(keys)
     for key in keys:
-        try: 
+        try:
             rtrn = cfg_d['default'][key]
         except:
-            try: 
+            try:
                 rtrn = cfg_d[section][key]
                 break
             except:
@@ -1590,7 +1725,6 @@ def cfg_val(keys, section, cfg_d, dflt=""):
             rtrn = rtrn.split(",")
             rtrn = [x.strip() for x in rtrn]
     return rtrn
-
 
 
 def bool_val_demo():
@@ -1617,13 +1751,13 @@ def bool_val_demo():
     Within a function use this to determine True or False in arguments provided: boo_val(['arg1', 'arg2', ...], args, kwargs, dflt='Your Default')
     """
     printit(msg, 'boxed', 'centered')
-    printit(f"Calling my_function('print'):")
+    printit("Calling my_function('print'):")
     my_function('print')
     print("-" * 40)
-    printit(f"Calling my_function('show', 'centered'):")
+    printit("Calling my_function('show', 'centered'):")
     my_function('show', 'centered')
     print("-" * 40)
-    printit(f"Calling my_function('prnt)', centered=False):")
+    printit("Calling my_function('prnt)', centered=False):")
     my_function('print', centered=False)
 
 
@@ -1876,13 +2010,9 @@ def centered(msgs, *args, **kwargs):
     returns: line|lines
     note: replaces deprecated centerit()
     """
-    """--== debugging ==--"""
+    """--== Debugging ==--"""
     # dbug(funcname())
     # dbug(msgs)
-    """--== validation ==--"""
-    if msgs is None:
-        dbug(f"msgs: {msgs} appear to be empty... returning")
-        return None
     """--== SEP_LINE ==--"""
     # try:
     #    # sometimes there is no stty... like with wsgi
@@ -1898,11 +2028,20 @@ def centered(msgs, *args, **kwargs):
     string_b = bool_val(['str', 'string'], args, kwargs, dflt=False)
     pad = kvarg_val(["pad"], kwargs, dflt=" ")
     # margin = 0
+    """--== Validation ==--"""
+    if msgs is None:
+        dbug(f"msgs: {msgs} appear to be empty... returning")
+        return None
+    if not isinstance(shift, int):
+        shift = 0
+    if not isinstance(length, int):
+        length = 0
     """--== Init ==--"""
     # reset = sub_color("reset")
     if length == 0:
         scr_columns = get_columns(shift=shift)
         length = scr_columns
+    l_pad_len = 0
     """--== Process ==--"""
     if isinstance(msgs, str):
         msgs = [msgs]
@@ -1936,7 +2075,7 @@ def centered(msgs, *args, **kwargs):
 
 
 # #############
-def ruleit(width=0, *args, **kwargs):
+def ruleit(*args, **kwargs):
     # #########
     """
     This is for development purposes
@@ -1949,14 +2088,14 @@ def ruleit(width=0, *args, **kwargs):
     returns: printed ruler line with tick marks and marker numbers below
     """
     """--== config ==--"""
-    width = kvarg_val(["width", "w", "length", "l"], kwargs, dflt=width)
+    width = kvarg_val(["width", "w", "length", "l"], kwargs, dflt=0)
     cntr = bool_val(["cntr", "center"], args, kwargs, dflt=False)
     prnt = bool_val(["prnt", "print"], args, kwargs, dflt=True)
     """--== SEP_LINE ==--"""
     line = ""
     tick_line = ""
     mark_line = ""
-    lines = []
+    # lines = []
     new_lines = []
     if width == 0:
         columns = get_columns()
@@ -2267,14 +2406,24 @@ def cls():
 
 
 # ########################
-def askYN(msg="Continue", *args, dflt="y", center=False, auto=False, timeout=0, **kwargs):
+def askYN(msg="Continue", *args, dflt="y", center=False, auto=False, **kwargs):
     # ####################
     """
+    purpose:
+    options:
+        - centered: bool
+        - timeout=0: int
+        - auto: bool
+        - exit: bool
+        - quit: bool
+        - dflt=y: str
+    returns: bool  # True or False
     auto var can be used to automatically invoke the default
     TODO: timeout=10  # times out in 10 secs and invokes dflt - this still requires you to hit enter : TODO
     # >>> askYN()
     # Continue [y]: True
     """
+    """--== Debugging ==--"""
     # dbug(f"funcname(): {funcname}")
     # dbug(f"msg: {msg}")
     # dbug(f"args: {args}")
@@ -2285,12 +2434,17 @@ def askYN(msg="Continue", *args, dflt="y", center=False, auto=False, timeout=0, 
         if args[0] in ["n", "N", "Y", "y"]:
             dflt = args[0]
     center = bool_val(['center', 'centered'], args, kwargs, dflt=center)
+    boxed_b = bool_val(['box', 'boxed'], args, kwargs, dflt=False)
     # dbug(center)
     auto = True if 'auto' in args else auto
     # dbug(auto)
     quit = kvarg_val('quit', kwargs)
     exit = kvarg_val('exit', kwargs, dflt=False)
-    timeout = kvarg_val("timeout", kwargs, dflt=timeout)
+    timeout = kvarg_val("timeout", kwargs, dflt=0)
+    # dbug(timeout)
+    """--== Validate ==--"""
+    if not isinstance(timeout, int):
+        timeout = 0
     """--== Process ==--"""
     if dflt.upper() == "Y" or dflt.upper() == "YES":
         dflt_msg = " [Y]/n "
@@ -2306,13 +2460,18 @@ def askYN(msg="Continue", *args, dflt="y", center=False, auto=False, timeout=0, 
         else:
             prompt = RESET + msg + dflt_msg
             # dbug(prompt)
-            ans = cinput(prompt)
+            if boxed_b:
+                printit(prompt, 'centered', 'boxed')
+                ans = cinput("  ", shift=-4)
+            else:
+                ans = cinput(prompt)
     else:
         # dbug(msg)
         if auto:
             ans = dflt
             # dbug(f"setting ans: {ans}")
         else:
+            # ddbug(f"timeout: {timeout}", 'ask')
             if timeout > 0:
                 from threading import Timer
                 t = Timer(timeout, print, ['Sorry, time is up... '])
@@ -2326,7 +2485,10 @@ def askYN(msg="Continue", *args, dflt="y", center=False, auto=False, timeout=0, 
                     dflt_msg = "".join(dflt_msg)
                 prompt = RESET + msg + dflt_msg
                 # dbug(prompt)
-                ans = input(prompt)
+                if boxed_b:
+                    ans = input(boxed(prompt))
+                else:
+                    ans = input(prompt)
     if ans.upper() == "":
         ans = dflt
     if msg != "":
@@ -2348,11 +2510,12 @@ def askYN_demo():
     """
     purpose: demo of using askYN() function
     """
-    new_line = "Sample new line..."
-    if askYN(f"Do you want to add this new_line: {new_line} ?", 'y', 'centered'):
+    new_line = "This is a sample new line..."
+    dbug(f"new_line: {new_line}")
+    if askYN("Do you want to add this new_line: ", 'y'):
         printit(f"Here we would call a function to add the new line: {new_line}", 'boxed', 'centered', box_color="yellow!")
-    if not askYN("Do you want to continue", 'centered', 'box'):
-        printit("User does not want to contimue...", 'centered')
+    if not askYN("(centered and boxed) Do you want to continue", 'centered', 'boxed'):
+        printit("User does not want to continue... we would have responded appropriately...", 'centered')
         return
     dbug("Testing dbug with ask and centered", 'ask', 'centered')
     r = askYN("Test of using askYN() ", 'centered')
@@ -2361,9 +2524,9 @@ def askYN_demo():
     printit("This next one is perhaps useful for developing creating a forced breakpoint... it is just 'askYN()' with no arguments anything but 'Y' will exit", 'centered', 'boxed')
     askYN()
     if askYN("Here I am asking if you like birds", 'centered', 'boxed'):
-        print("You like birds...")
+        printit("You like birds...", 'centered')
     else:
-        print("You do not like birds...")
+        printit("You do not like birds...", 'centered')
 
 
 def get_dtime_format(s_date):  # date_fmt
@@ -2387,7 +2550,7 @@ def get_dtime_format(s_date):  # date_fmt
     date_patterns = ["%Y%m%d", "%d-%m-%Y", "%Y-%m-%d", "%Y%m%d-%H%M", "%Y-%m-%d %H:%M", "%Y%m%d-%H:%M", "%Y-%m-%d %H:%M:%S"]
     for pattern in date_patterns:
         try:
-            r = datetime.strptime(s_date, pattern).date()
+            # r = datetime.strptime(s_date, pattern).date()
             # dbug(f"r: {r} pattern: {pattern}")
             return pattern + add_this
         except Exception as Error:
@@ -2398,7 +2561,7 @@ def get_dtime_format(s_date):  # date_fmt
     return None
     # ### EOB def get_dtime_format(s_date): ### #
 
-# lias
+# alias
 # get_date_format = dtfmt
 
 
@@ -2576,7 +2739,7 @@ def file_exists(file, type="file", *args, **kwargs):
         return os.path.isfile(file)
     if type in ('X', 'x', 'executable'):
         try:
-            os.path.isfile(file, X_OK)
+            os.path.isfile(file)  # , X_OK)
         except Exception as e:
             print("Exception: " + str(e))
             return False
@@ -2632,7 +2795,7 @@ def purify_file(file, *args, **kwargs):
             if n == 0 and dat_b:
                 if line.startswith("#"):
                     # dbug(line)
-                    line = re.sub("^#\s", "", line)
+                    line = re.sub(r"^#\s", "", line)
                     line = line.rstrip('\n')
                     # dbug(line)
                 purified_lines.append(line)
@@ -2665,14 +2828,14 @@ def purify_line(line):
         return line.strip()
 
 
-# #######################
-def pretty_array(array):
-    # ##################
-    """
-    prints out nested arrays into readable format using yaml
-    """
-    import yaml
-    print(yaml.dump(array, default_flow_style=False))
+# # #######################
+# def pretty_array(array):
+#     # ##################
+#     """
+#     prints out nested arrays into readable format using yaml
+#     """
+#     import yaml
+#     print(yaml.dump(array, default_flow_style=False))
 
 
 # ###################################
@@ -2705,8 +2868,6 @@ def ireplace(s, indices=[], char="|"):
     return s
 
 
-
-
 # ########################################
 def first_matched_line(filename, pattern, upto=1):
     # ####################################
@@ -2719,6 +2880,11 @@ def first_matched_line(filename, pattern, upto=1):
         - upto: int default=1  # How many matching lines to return
     returns: matching lines
     """
+    """--== SEP_LINE ==--"""
+    # dbug(funcname())
+    # dbug(filename)
+    # dbug(pattern)
+    """--== SEP_LINE ==--"""
     with open(filename, "r", encoding="utf-8") as f:
         lines = f.readlines()
     matched_l = []
@@ -2793,6 +2959,9 @@ def kv_cols(my_d, cols=3, *args, **kwargs):
     rnd = kvarg_val(['rnd', 'round'], kwargs, dflt="")
     human = bool_val(['h', 'human', "H"], args, kwargs, dflt=False)
     """--== Validation ==--"""
+    if my_d is None:
+        dbug("Submitted dict is None")
+        return None
     if len(my_d) == 0:
         dbug("Nothing submitted... returning...")
         return None
@@ -2843,7 +3012,7 @@ def kv_cols(my_d, cols=3, *args, **kwargs):
                 val = val.replace("^", "")
             if val.startswith("+"):
                 val = val.replace("+", "")
-            val = val.replace("?", "\?")
+            val = val.replace("?", "?")
             v = str(v).replace("^", "")
             codes = split_codes(v)
             prefix_code = codes[0]
@@ -2890,6 +3059,7 @@ def kv_cols(my_d, cols=3, *args, **kwargs):
                 myd[col]["." * (n + 1)] = "..."
         # dbug(f"myd[{col}]: {myd[col]}")
         # dbug(header_b)
+        # dbug(rnd)
         table = gtable(
             myd[col],
             prnt=False,
@@ -2897,6 +3067,7 @@ def kv_cols(my_d, cols=3, *args, **kwargs):
             box_style=box_style,
             neg=neg,
             rnd=rnd,
+            col_limit=max_width,
             human=human,
             box_color=box_color,
             color=color,
@@ -2931,9 +3102,13 @@ def kv_cols(my_d, cols=3, *args, **kwargs):
 def kv_cols_demo():
     large_d = {}
     for x in range(30):
-        large_d[f'key_{x}'] = f'value_{x}'
+        v = (x * 1000) / 3
+        large_d[f'key_{x}'] = f'{v}'
     cols = 2
     kv_cols(large_d, cols, 'prnt', title=f"{funcname()} Demo: {cols} no header ", footer=dbug('here'))
+    kv_cols(large_d, cols, 'prnt', title=f"{funcname()} Demo: {cols} no header rnd=2", footer=dbug('here'), rnd=2)
+    kv_cols(large_d, cols, 'prnt', title=f"{funcname()} Demo: {cols} no header rnd=2 and human=True", footer=dbug('here'), rnd=2, human=True)
+    dbug('ask')
     cols += 1
     print()
     kv_cols(large_d, cols, 'prnt', 'hdr', title=f"{funcname()} Demo: {cols} w/header ", footer=dbug('here'))
@@ -2951,7 +3126,7 @@ def kv_cols_demo():
     kv_cols(large_d, cols, 'prnt', 'hdr', 'centered', 'boxed', title=f"{funcname()} Demo: {cols} w/header cntered and boxed ", mstr_box_clr="yellow! on black", footer=dbug('here'))
 
 
-def rowscols_cols(lol, cols,  *args, **kwargs):
+def rowscols_cols(lol, cols, *args, **kwargs):
     """
     WIP
     This is an expiriment but I think it could be useful
@@ -2986,12 +3161,13 @@ def rowscols_cols(lol, cols,  *args, **kwargs):
     +------+-----+----+ +------+-----+----+
     |      |     |    |
     +------+-----+----+
-    having seconds thoughts that this should be part of gtables...
+    TODO? - having seconds thoughts that this should be part of gtables...
+    WIP WIP WIP
     """
+    import math
     colnames = ["IP", "Hostname", "Status", "Ports"]
     rows_len = len(lol)
     dbug(rows_len)
-    import math
     half = math.ceil(rows_len / cols)
     dbug(half)
     chunks = chunkit(lol, half)
@@ -3004,14 +3180,14 @@ def rowscols_cols(lol, cols,  *args, **kwargs):
     dbug(len(boxes))
     col_blocks = gcolumnize(boxes)
     return(col_blocks)
-
+    # ### EOB def rowscols_cols(lol, cols, *args, **kwargs): ### #
 
 
 # #################################
 def key_swap(orig_key, new_key, d):
     # #############################
     """
-    purpose: switch or change the keyname on an element in a dictionary
+    purpose: switch or change the keyname (a single key)  on an element in a dictionary
     args:
         orig_key  # original key name
         new_keyA  # new key name
@@ -3130,26 +3306,16 @@ def gcolumnize(msg_l, *args, **kwargs):
     """--== Init ==--"""
     scr_col_len = get_columns()  # get the number of columns on the terminal screen
     # if width == 0:
-        # width = int(int(scr_col_len) * 0.8)
-        # dbug(f"No width supplied, using 80% od screen width: {width}")
+    #    # width = int(int(scr_col_len) * 0.8)
+    #    # dbug(f"No width supplied, using 80% od screen width: {width}")
     """--== Convert ==--"""
     if all([islos(elem) for elem in msg_l]):
-        # dbug(f"This is clearly a list of blocks made up with lines/strings")
+        # dbug(f"This is clearly a list of blocks made up with lines(strings)")
         if cols > 0:
-            rows = []
-            row = []
-            # msg_l = ["A", "B", "C"]  # debugging
+            # rows = []
+            # row = []
             # """--== SEP_LINE ==--"""
             msg_l = chunkit(msg_l, cols, 'full')
-            # for elem in msg_l:  # debugging
-                # dbug(f"============ {elem} ============")
-                # for item in elem:
-                    # dbug(item, 'lst')
-            flag = True
-            # dbug(f" msg_l is now [col1, col2, ....]   and colX = [block1, block2, ...] flag: {flag}")
-            # dbug(msg_l)
-            # for elem in msg_l:  # debugging
-                # dbug(elem, 'lst')
     """--== EOB if all([islos(elem) for elem in msg_l]): ==--"""
     # if not islol(my_lol):
     if not islol(msg_l):
@@ -3452,7 +3618,9 @@ def gcolumnize_demo():
     lines = gcolumnize(my_l, 'prnt', 'boxed', title="boxed")
     dbug('ask')
     """--== SEP_LINE ==--"""
-    my_l = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty", "twenty one", "twenty two", "twenty three", "twenty four"]
+    my_l = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+            "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen",
+            "eighteen", "nineteen", "twenty", "twenty one", "twenty two", "twenty three", "twenty four"]
     lines = gcolumnize(my_l, 'prnt', 'boxed', title="boxed - no args - avoiding screen overrun", sep=" | ", footer=dbug('here'))
     # lines = columned(my_l, 'prnt', title=" - no args - avoiding screen overrun", sep=" | ", footer=dbug('here'))
     # maxof_lines = maxof(lines)
@@ -3461,7 +3629,7 @@ def gcolumnize_demo():
     dbug('ask')
     gcolumnize(my_l, 'boxed', title="no args", sep=" | ", order='pivot', prnt=True, footer=dbug('here'))
     width = 50
-    gcolumnize(my_l, 'boxed', width=width, sep=" | ", title=f"width={width} order='h' (horizontal)", order="h",  prnt=True, footer=dbug('here'))
+    gcolumnize(my_l, 'boxed', width=width, sep=" | ", title=f"width={width} order='h' (horizontal)", order="h", prnt=True, footer=dbug('here'))
     width = 70
     gcolumnize(my_l, 'boxed', width=width, sep=" | ", title=f"width={width} but order='v' (vertical)", order='v', prnt=True, footer=dbug('here'))
     cols = 4
@@ -3629,11 +3797,11 @@ def sayit(msg, *args, prnt=True, **kwargs):
     """
     purpose: This will use computer voice (espeak) to "say" the msg
     options
-    - prnt: will print as well
-    - gender: str    # m| f
-    - volume: float  # 0 - 1
-    - rate: int      # default = 150
-    - tone: int     # 1 - 5
+    - prnt: will print as well  # this is very limited
+    - gender: str               # m | f
+    - volume: float             # 0 - 1
+    - rate: int                 # default = 150
+    - tone: int                 # 1 - 5  <-- this does not seem to do anything???
     returns: None
     notes:
     # use espeak --voices to see them all then add +m|f1-?
@@ -3647,6 +3815,7 @@ def sayit(msg, *args, prnt=True, **kwargs):
     #        print(msg)
     #        engine.say(msg)
     """
+
     """--== Imports ==--"""
     import pyttsx3
     """--== Config ==--"""
@@ -3660,12 +3829,27 @@ def sayit(msg, *args, prnt=True, **kwargs):
     engine.setProperty('rate', rate)   # rate is w/m
     engine.setProperty('volume', volume)
     engine.setProperty('voice', f'english-us+{gender}{tone}')
+    """--== Debugging ==--"""
+    # voices = engine.getProperty('voices')
+    # for n, voice in enumerate(voices):
+    #     dbug(msg + f"index-> {n} voice name is: {voice.name}")
+    #     if 'rench' in voice.name:
+    #         engine.setProperty('voice', voices[28].id)
     """--== Process ==--"""
     engine.say(msg)
     engine.runAndWait()
     if prnt:
         printit(msg)
     # ### EOB def sayit(msg, *args, prnt=True, **kwargs): ### #
+
+
+def sayit_demo(*args, **kwargs):
+    sayit("Testing sayit")
+    sayit("Testing sayit with female voice", gender="f")
+    rate = 200
+    for gender in ["f", "m"]:
+        sayit(f"Testing sayit with gender = {gender} and rate={rate}", gender=gender, rate=rate)
+    sayit("Testing sayit with print", 'prnt')
 
 
 # ################################
@@ -3694,17 +3878,15 @@ def printit(msg, *args, **kwargs):
             eg msg = "my  message[blink red on black]whatever goes here[/]. The end or close tag will reset color")
     returns: msgs  # list [default] or str depending on rtrn_type
     """
-    """--== debugging ==--"""
+    """--== Debugging ==--"""
     # dbug(funcname())
     # dbug(msg)
+    # dbug(type(msg))
     # dbug(args)
     # dbug(kwargs)
-    """--== validate ==--"""
-    if len(msg) == 0:
-        dbug(f"nothing to print msg: {msg}")
-        return
     """--== Config ==--"""
     centered_b = bool_val(['centered', 'center'], args, kwargs, dflt=False)
+    # dbug(centered_b)
     txt_center = kvarg_val(['text_center', 'txt_center', 'txt_centered', 'txt_cntr', 'lines_centered', 'center_txt', 'cntr_txt'], kwargs, dflt=0)
     # dbug(txt_center)
     # if not isinstance(mycentered, bool):
@@ -3731,15 +3913,15 @@ def printit(msg, *args, **kwargs):
     if str_b:
         rtrn_type = "str"
     # end = kvarg_val('end', kwargs, dflt="\n")
+    """--== Validate ==--"""
+    if len(msg) == 0:
+        dbug(f"nothing to print msg: {msg}")
+        return
+    if not isinstance(columnize, bool):
+        columnize = False
+    if not isinstance(width, int):
+        width = 0
     """--== Convert to list (msgs) ==--"""
-    # if isinstance(msg, list):  # debugging only
-        # for m in msg:  # for debugging only
-            # dbug(m)
-        # dbug('ask')
-    # if box_color != "":  #  or footer != "" or title != '':
-        # sometimes box_color is transferred but boxed is not desired so this is commented out
-        # boxed_b = True
-        # # dbug(boxed_b)
     # dbug(color)
     if isinstance(msg, tuple):
         msgs = list(msg)
@@ -3759,11 +3941,13 @@ def printit(msg, *args, **kwargs):
             msgs = msg.split("\n")
             # dbug(len(msgs))
             # dbug(msgs, 'ask')
-            mymsgs = msg.splitlines()
+            # mymsgs = msg.splitlines()
             # dbug(mymsgs, 'ask')
         else:
             # dbug(msg)
             msgs = [msg]
+        # ddbug(f"columnize: {columnize}")
+        # ddbug(f"width: {width}", 'ask')
         if not columnize and width > 0:
             msgs = wrapit(msgs, width-2)
         # dbug(msgs)
@@ -3772,16 +3956,11 @@ def printit(msg, *args, **kwargs):
         msgs = []
         for k, v in msg.items():
             msgs.append(f"k: {k} v: {v}")
+    if not isinstance(msgs, list):
+        dbug(f"Failed to convert msg to list ...: type(msg): {type(msg)}... returning")
+        return
     """--== Process ==--"""
     color_coded = False  # init color_coded before test
-    # if title != "" and not boxed_b:
-        # max_len = maxof(msgs)
-        # title = centered(title, length=max_len)[0]
-        # msgs.insert(0, title)
-    # if footer != "" and not boxed_b:
-        # max_len = maxof(msgs)
-        # footer = centered(footer, length=max_len)[0]
-        # msgs.append(footer)
     for msg in msgs:
         # this is not fully tested, but seems to work... until we curl wttr....
         if re.search(r"\[.+?\].+\[/]", str(msg)):
@@ -3796,9 +3975,9 @@ def printit(msg, *args, **kwargs):
         # dbug(m)
     if columnize:
         # if width < 1:
-            # scr_len = get_columns(rows=False)
-            # scr_len = get_columns()
-            # width = ceil(scr_len * 0.8)
+        #    scr_len = get_columns(rows=False)
+        #    scr_len = get_columns()
+        #   width = ceil(scr_len * 0.8)
         # dbug(f"gcolumnize(msgs: {msgs} width: {width})")
         msgs = gcolumnize(msg, width=width)
         # dbug(f"gcolumnized msgs: {msgs}")
@@ -3821,7 +4000,8 @@ def printit(msg, *args, **kwargs):
         # dbug(boxed_b)
         if nclen(title) > 0:
             # dbug(f"title: {title}")
-            if not centered_b:
+            # if not centered_b:
+            if centered_b:
                 msgs_len = maxof(msgs)
                 # dbug(msgs_len)
                 # if centered_b:
@@ -3831,7 +4011,8 @@ def printit(msg, *args, **kwargs):
             # dbug(f"Just inserted title: {title}")
         # dbug(color)
         if nclen(footer) > 0:
-            if not centered_b:
+            # if not centered_b:
+            if centered_b:
                 msgs_len = maxof(msgs)
                 footer = centered(footer, length=msgs_len)[0]
             msgs.append(footer)
@@ -4424,18 +4605,26 @@ def wrapit_demo(*args, **kwargs):
     # boxed(s, 'prnt', length=20)
     # ruleit(20)
 
+
 def get_columns(*args, **kwargs):
     """
     gets screen/terminal cols OR rows
     returns int(columns)| int(rows: bool) | int(cols), int(rows) both: bool
     """
+    """--== Debugging ==--"""
+    # dbug(funcname())
+    # dbug(args)
+    # dbug(kwargs)
     """--== Config ==--"""
-    shift = kvarg_val("shift", kwargs, dflt=0)  # this is probably never used
+    shift = kvarg_val("shift", kwargs, dflt=0)
     rows_b = bool_val("rows", args, kwargs, dflt=False)
     both_b = bool_val("both", args, kwargs, dflt=False)
     """--== Init ==--"""
     columns = 80
     # rows = 40
+    """--== Validate ==--"""
+    if not isinstance(shift, int):
+        shift = 0
     """--== Process ==--"""
     try:
         num_rows, columns = os.popen("stty size", "r").read().split()
@@ -4448,9 +4637,11 @@ def get_columns(*args, **kwargs):
         return int(columns), int(num_rows)
     columns = int(columns)
     # dbug(columns)
+    # dbug(shift)
     columns = columns + int(shift)
-    # dbug(columns)
-    return  int(columns)
+    # dbug(f"Returning columns: {columns}", 'ask')
+    return int(columns)
+    # ### EOB def get_columns(*args, **kwargs): ### #
 
 
 def replace_all(msg, with_d):
@@ -4520,6 +4711,11 @@ def boxed(msgs, *args, cornerchr="+", hchr="=", vchr="|", padmin=1, color="", ti
     # br = bot right = box_chrs[0
     tl, hc, ts, tr, vc, ls, rs, ms, bl, bs, br = box_chrs
     pad = gclr(color) + str(pad)
+    """--== Validate ==--"""
+    # if not isinstance(top_pad, int):
+    #    top_pad = 0
+    # if not isinstance(bottom_pad, int):
+        # bottom_pad = 0
     """--== Convert ==--"""
     if isinstance(msgs, list):
         new_msgs = []
@@ -4660,11 +4856,25 @@ def boxed(msgs, *args, cornerchr="+", hchr="=", vchr="|", padmin=1, color="", ti
 
 
 # ##################################
-def gline(width=0, msg="", *args, **kwargs):
+def gline(width=0, *args, **kwargs):
     # ##############################
     """
-    args: width: int, msg: str <-- msg has to be a key=val pair! eg: gline(60, msg="My Message", just='center')
-    options: width, lc, rc, fc, box_color, color, pad, lpad, rpad, lfill_color,  rfill_color, just: str
+    purpose: prints a line with msg and 
+    options:
+        - width: int, 
+        - msg|title: str  # default=""  msg has to be a key=val pair! eg: gline(60, msg="My Message", just='center')
+        - fc: str         # default=" " fill string/character (char(s) used to fill all surrounding space default: lc=rc=fc)
+        - lc: str         # default=fc  left/edge/corner (char(s) for left corner ie first charater(s))
+        - rc: str         # default=lc  right/edge/corner (char(s) for right corner ie last charcter(s))
+        - pad: str        # default=""  string/character(s) on each side of msg
+        - lpad: str       # default=pad
+        - rpad: str       # default=lpad
+        - box_color: str
+        - color: str
+        - lfill_color: str
+        - rfill_color: str
+        - just: str       # default = "left"|"l" but can be declared "center"|"c" or 'right'|"r"
+        - prnt: bool      # prints the output
     returns: line: str
     """
     # dbug(funcname())
@@ -4673,14 +4883,14 @@ def gline(width=0, msg="", *args, **kwargs):
     # if "TEST" in msg:
     # dbug(f"msg: [{msg}]")
     """--== Config ==--"""
-    msg = kvarg_val(['msg', 'title', 'footer'], kwargs, dflt=msg)
+    msg = kvarg_val(['msg', 'title', 'footer'], kwargs, dflt="")
     # dbug(repr(msg))
     # dbug(width)
     width = kvarg_val(['width', 'length'], kwargs, dflt=width)
     # dbug(width)
-    lc = kvarg_val(['lc', 'ec', 'echr'], kwargs, dflt="")
+    fc = kvarg_val(['fc', 'fill_chr', 'hc', 'fill'], kwargs, dflt=" ")
+    lc = kvarg_val(['lc', 'ec', 'echr'], kwargs, dflt=fc)
     rc = kvarg_val(['rc', 'tr', 'br', 're'], kwargs, dflt=lc)
-    fc = kvarg_val(['fc', 'fill_chr', 'hc'], kwargs, dflt=" ")
     box_color = kvarg_val(['box_color'], kwargs, dflt="")
     # color = kvarg_val(['color'], kwargs, dflt="reset")
     color = kvarg_val(['color'], kwargs, dflt="")
@@ -4691,20 +4901,23 @@ def gline(width=0, msg="", *args, **kwargs):
     rpad = kvarg_val(['rpad'], kwargs, dflt=pad)
     rfill_color = kvarg_val(['rfill_color'], kwargs, dflt=color)
     # the order here for just is important
-    just = kvarg_val("just", kwargs, dflt='ljust')
+    just = kvarg_val(["just", "justification"], kwargs, dflt='ljust')
+    # dbug(f"msg: {msg} just: {just}")
     centered = bool_val(["centered", "center"], args, kwargs, dflt=False)
     if centered:
         # change just to 'center' - the bool val centered get ignored after this
-        just = 'center'
+        just = 'c'
     just = kvarg_val(['ljust'], kwargs, dflt=just)
     just = kvarg_val(['rjust'], kwargs, dflt=just)
+    prnt = bool_val(["print", "prnt", "show", "verbose"], args, kwargs, dflt=False)
+    """--== Validate ==--"""
+    # if not isinstance(width, int):
+    #     width = 0
     """--== Init ==--"""
     RESET = sub_color('reset')
-    # if rfill_color == "":
-    #     rfill_color = color
-    # if lfill_color == "":
-    #     lfill_color = color
     msg = str(msg)  # deals with int, floats, bool, etc
+    llen = 0
+    rlen = 0
     """--== Process ==--"""
     if color == "":
         color = 'reset'
@@ -4715,56 +4928,37 @@ def gline(width=0, msg="", *args, **kwargs):
     LFILL_COLOR = sub_color(lfill_color)
     RFILL_COLOR = sub_color(rfill_color)
     """--== color_coded??? ==--"""
-    color_coded = False
-    if re.search(r"\[.+?\].+\[/]", str(msg)):
-        # dbug(f"msg: {msg} appears to be color_coded")
-        color_coded = True
-    if color_coded:
-        msg = clr_coded(msg)
+    # color_coded = False
+    # if re.search(r"\[.+?\].+\[/]", str(msg)):
+    #     # dbug(f"msg: {msg} appears to be color_coded")
+    #     color_coded = True
+    # if color_coded:
+    msg = clr_coded(msg)
     """--== EOB ==--"""
     if nclen(msg) > 0:
         # nc_msg = escape_ansi(msg)
-        # dbug(repr(msg))
-        # dbug(repr(nc_msg))
-        # dbug(f"msg: [{msg}]")
-        # dbug(f"type(msg): [{type(msg)}]")
         msg = lpad + msg + RFILL_COLOR + rpad
         # dbug(f"msg: [{msg}]")
-    # dbug(len(msg))
     msg_len = nclen(msg)
-    # dbug(msg_len)
-    # dbug(f"width: {width} msg_len: {msg_len} leni(rc): {len(rc)} len(lc): {len(lc)}")
     flen = width - msg_len - len(rc) - len(lc)
-    # dbug(f"width: {width} just: {just} msg_len: {msg_len} flen: {flen} repr(msg): [{repr(msg)}] len(lpad): {len(lpad)} len(pad): {len(pad)} len(rpad): {len(rpad)}", 'ask')
-    # if flen < width:
-    #     flen = flen
-    if just == 'center':
+    # dbug(f"msg: {msg} just: {just}")
+    if just in ('center', "c"):
         llen = rlen = (flen // 2)
         diff = flen - (llen + rlen)
         rlen += diff
         # dbug(f"just: {just} width: {width} msg_len: {msg_len} diff: {diff} =  flen: {flen} - ( llen: {llen} - rlen: {rlen} )")
-    if just == 'ljust':
+    if just in ('ljust', 'left', 'l'):
         # llen = len(lpad)
         llen = 0  # lpad has already been applied
         rlen = flen  # - len(rpad)  # ???? not sure about this.... 20220803
         # dbug(f"just: {just} width: {width} msg_len: {msg_len}  llen: {llen} = len(lpad): {len(lpad)}  rlen: {rlen} = flen: {flen} - len(lpad): {len(lpad)} len(rpad): {len(rpad)}")
-    if just == 'rjust':
+    if just in ('rjust', 'right', 'r'):
         rlen = 0
         llen = flen
-    # dbug(llen)
-    # dbug(width)
-    # dbug(rlen)
-    # dbug(f"fc: [{fc}] pad: [{pad}] msg: {msg}")
-    # dbug(f"msg: [{msg}]")
     if nclen(msg) > 0:
         # dbug(repr(msg))
-        # if "TEST" in msg:
-        #     dbug(f"msg): [{msg}]")
-        #     dbug(repr(LFILL_COLOR))
-        #     dbug(repr(RFILL_COLOR))
         if fc == ' ':  # then treat it as a pad... use COLOR instead of BOX_COLOR
             # dbug(f"{RESET}repr(BOX_COLOR): [{repr(BOX_COLOR)}] repr(COLOR): [{repr(COLOR)}] fc: [{fc}] rc: [{rc}] msg: [{msg}] repr(LFILL_COLOR): [{repr(LFILL_COLOR)}] rlen: {rlen} repr(RFILL_COLOR): [{repr(RFILL_COLOR)}]")
-            # if "Quote" in msg:
             #     dbug(f"msg: [{msg}]")
             line = RESET + BOX_COLOR + lc + RESET + LFILL_COLOR + (fc * llen) + msg +  RFILL_COLOR + (fc * rlen) + RESET + BOX_COLOR + rc + RESET
             # dbug(f"line: [{line}]")
@@ -4775,9 +4969,53 @@ def gline(width=0, msg="", *args, **kwargs):
         # dbug(repr(line))
     else:
         line = RESET + BOX_COLOR + lc + (fc * llen) + (fc * rlen) + rc + RESET
+    if prnt:
+        print(line)
     # dbug(f"repr(color): {repr(color)} repr(box_color): {repr(box_color)}  line: [{line}]")
     return line
     # ### EOB def gline(width=0, *args, **kwargs): ### #
+
+
+def sepline(width, msg, fc="=", *args, **kwargs):
+    """
+    purpose: quick-n-dirty Separation Line - I use this just to separate sections
+    returns: prints a line with "=" fill character and msg in the middle (centered) with width=width
+    see gline_demo
+    """
+    gline(width, msg=msg, just="c", fc=fc, *args, prnt=True, **kwargs)
+
+
+def gline_demo(*args, **kwargs):
+    """
+    WIP
+    """
+    """--== Init ==--"""
+    width = 80
+    msg = "gline test message"
+    box_color = "white on black"
+    color = 'blue'
+    # sepline = lambda width, msg: gline(width, msg=msg, just="c", fc="=", prnt=True)
+    """--== Process ==--"""
+    sepline(80, " sep line ")
+    print(gline(80, msg=" simple title line ", just="c", fc="="))
+    print(gline(80, msg, fc="*", just="c", lc="[", rc="]"))
+    print(gline(80, msg, lfill="-", rfill="-", just="r", pad="_pad_", lc="[", rc="]"))
+    print(gline(80, msg=msg+" w/lc and rc declared", lc="(--", rc="--)"))
+    print(gline(80, msg=msg+" w/lc and rc declared just=center", lc="(--", rc="--)", just="c"))
+    print(gline(80, lc="|", msg=msg + " w/colors", pad="", rc="|", box_color='red', color='black', lfill_color='blue', rfill_color="yellow"))
+    sepline(80, " sep line ")
+    """--== SEP_LINE ==--"""
+    lines = []
+    lines.append(gline(width, lc="+", rc="+", fc="-", title=" top line quick-n-dirty DIY box ", center=True, box_color=box_color, color=color))
+    lines.append(gline(width, lc="|", rc="|", fc=" ", title=msg, just='c', box_color=box_color, color=color))
+    lines.append(gline(width, lc="+", rc="+", fc="-", title=" my bottom line ", center=True, box_color=box_color, color=color))
+    printit(lines)
+    sepline(80, " sep line ")
+    """--== SEP_LINE ==--"""
+    ruleit(width=80)
+    sepline(80, " sep line ")
+    """--== SEP_LINE ==--"""
+    printit("gline is used to create boxes", 'boxed', footer=dbug('here'), txt_center=99, title="End of gline demo", box_clr="white! on black")
 
 
 # #############
@@ -4813,7 +5051,6 @@ class MenuBox:
         self.clines = 2
         self.bclr = ""
         self.center = True
-
     """--== SEP_LINE ==--"""
     def add_selection(self, selection):
         # selection should be [ "title", func, arg1, arg2, arg3, ... ]
@@ -4831,7 +5068,6 @@ class MenuBox:
                 sys.exit()
         self.cnt += 1
         self.selections[str(self.cnt)] = selection
-
     """--== SEP_LINE ==--"""
     def show(self):
         self.title = f"Menu: {self.name}"
@@ -4882,35 +5118,31 @@ def isnumber(x, *args, **kwargs):
     """
     purpose: determines if x is a number even if it is a percent, or negative, or is 2k or 4b or 10M etc
              or test for stricktly float
+    options:
+        - float:  bool  # is this a float
+        - human:  test the submission after stripping off "human" symbols like "M" or "G" or "%" etc
     input: x: str|float|int
     returns: True|False
     notes: tests... pos, neg, floats, int, scientific, B(illion), T(trillions), G(ig.*) Kb(ytes|its), Mb(ytes)
-    Can be used on financial data which often includes M(illions) or B(illions)
-    In tables I use this to decide if "x" should get right justified
-    >>> nums = [0.00, "0.00", "1.2", "+1.2", "-1.2", "1.2B", " 1.2M ", "1.2Kb ", "1.2Mb", "1.2e-9", "1.2%", 42.25, 1.1116174459457397, "2022-01-01"]
-    >>> for num in nums:
-    ...     isnumber(num)
-    True
-    True
-    True
-    True
-    True
-    True
-    True
-    True
-    True
-    True
-    True
-    True
-    True
-    False
+    Can be used on financial data which often includes M(illions) or B(illions) if human option included
     """
     """--== debugging ==--"""
+    # dbug(funcname())
+    # dbug(args)
+    # dbug(kwargs)
     # dbug(repr(x))
     # dbug(type(x))
     """--== Config ==--"""
     float_b = bool_val(["flt", "float"], args, kwargs, dflt=False)
+    human = bool_val(["human", "H", "h"], args, kwargs, dfault=False)
+    """--== Validate ==--"""
+    if x is None:
+        # dbug(x)
+        return False
     """--== Process ==--"""
+    x = escape_ansi(x)  # strip off any ansi codes/color codes
+    if human:
+        x = re.sub("[GMK%e]", "", str(x))
     if float_b:
         try:
             float(x)
@@ -4922,13 +5154,23 @@ def isnumber(x, *args, **kwargs):
     x = str(x).strip()
     if x.startswith(("-", "+")):
         x = x.lstrip(r"[+-]")
-    if x.endswith(("B", "M", "K", "G", "T", "Kb", "Mb", "%")):
-        x = x.rstrip(r"[BMKGb%]")
-    x = x.replace('.', '', 1).replace(",", "").replace("e-", "", 1).replace("%", "", 1)
+    x = x.replace('.', '', 1).replace(",", "").replace("e-", "", 1)  # .replace("%", "", 1)
     # dbug(repr(x))
     r = x.isdigit()
     # dbug(f"Returning: {r}")
     return r
+    # ### EOB def isnumber(x, *args, **kwargs): ### #
+
+
+def isnumber_demo(*args, **kwargs):
+    """
+    WIP
+    """
+    numbers = [-1.003456, -0.3456, "44,56", "22%", "4,56G", "-", "four"]
+    for num in numbers:
+        dbug(f"num: {num} isnumber(num): {isnumber(num)}")
+        # num = re.sub("[MGK%]", "", str(num))
+        dbug(f"num: {num} isnumber(num): {isnumber(num, 'human')} with 'human' option")
 
 
 # ###################################################
@@ -4967,6 +5209,12 @@ def get_boxchrs(box_style="single", *args, **kwargs):
 
 
 def flattenit(my_l):
+    """
+    WIP
+    purpose: "flattens nested lists
+    options: none
+    returns: list
+    """
     flatlist = []
     for elem in my_l:
         # dbug(f"Working on elem: {elem}")
@@ -4974,13 +5222,11 @@ def flattenit(my_l):
             # dbug(f"flattening elem: {elem}")
             flatlist += flattenit(elem)
         else:
-            # dbug(f"adding elem:{elem}")
-            # dbug(elem)
-            # dbug(type(elem))
             flatlist.append(elem)
         # dbug(f"Now flatlist: {flatlist}", 'ask')
     # dbug(flatlist)
     return flatlist
+    # ### EOB def flattenit(my_l): ### #
 
 
 # #########################################################################
@@ -5020,6 +5266,7 @@ def gtable(lol, *args, **kwargs):
         - cell_pad=' ': str    # you can set the padding char(s)
         - strip: bool          # strip all white space off of ever element in every row
         - blanks: str          # you can declare how blank cells (blank elements in a row) should appear
+        - cols: int            # split a table into several tables or columns (aka chunks)
     returns lines: list
     Notes:
         if colnames="firstrow" then the firstrow will be extracted and used for the header
@@ -5091,6 +5338,7 @@ def gtable(lol, *args, **kwargs):
     delimiter = kvarg_val(["delimiter", "delim"], kwargs, dflt=",")  # only needed if lol is a filename and not the default
     blanks = kvarg_val(["blank", "blanks"], kwargs, dflt="")
     skip = bool_val(['skip'], args, kwargs, dflt=False)  # skip non-compliant lines/rows?
+    cols = kvarg_val(["cols", "columns", "chunks", "splits"], kwargs, dflt=1)
     """--== Validate ==--"""
     if not isinstance(selected_cols, list):
         dbug(f"selected_cols: {selected_cols} must be a list ... please investigate... returning...")
@@ -5246,12 +5494,13 @@ def gtable(lol, *args, **kwargs):
                 new_lol[0][0] = 'idx'
             lol = new_lol
     # dbug(lol)
-    """--== SEP_LINE ==--"""
     if isinstance(lol[0], str) or isinstance(lol[0], int) or isinstance(lol[0], float):
         lol = [(lol)]  # lol maybe a simple list so turn it into an lol with one row
     if isinstance(lol, np.ndarray):
         lol = lol.tolist()
+    """--== End of Convert ==--"""
     # now lol[0] will be the header names (colnames)
+    """--== Init ==--"""
     max_row_lines = []
     for row in lol:
         max_row_lines.append(1)  # initializes a max_row_lines number for each row default=1
@@ -5579,51 +5828,94 @@ def gtable(lol, *args, **kwargs):
     # dbug(lol[:3])
     """--== condition any numbers ==--"""
     # Condition any numbers before measuring the lenght (see next block)
-    if neg or rnd != "" or human:
-        # dbug(f"rnd: {rnd} human: {human}")
-        new_lol = []
-        mycolnames = lol[0]
-        # for row in lol[:3]:  # for debugging
-        for row in lol:
-            # dbug(row)
-            new_row = []
-            for n, elem in enumerate(row):
-                new_elem = elem
-                if isnumber(elem):
-                    myrnd = ""
-                    myhuman = ""
-                    myneg = ""
-                    # dbug(f"elem: {elem} isnumber...")
-                    if isinstance(rnd, dict):
-                        rnd_l = list(rnd.keys())
-                        # dbug(mycolnames[n])
-                        if mycolnames[n] in rnd_l:
-                            # dbug(f"mycolnames[n]: {mycolnames[n]} is in rnd_l: {rnd_l} with val rnd[mycolnames[n]]: {rnd[mycolnames[n]]}")
-                            # elem = cond_num(elem, rnd=rnd[mycolnames[n]])
-                            myrnd = rnd[mycolnames[n]]
-                            # dbug(f"elem: {elem}", 'ask')
-                        else:
-                            # dbug(f"Oooops mycolnames[n]: {mycolnames[n]} is not in rnd_l: {rnd_l}")
-                            myrnd = ""
-                    # else:
-                    if isinstance(human, list):
-                        # dbug(f"chkg mycolnames[n]: {mycolnames[n]} in human: {human}")
-                        if mycolnames[n] in human:
+    # if neg or rnd != "" or human:
+    # dbug(f"rnd: {rnd} human: {human}")
+    new_lol = []
+    mycolnames = lol[0]
+    # for row in lol[:3]:  # for debugging
+    for row in lol:
+        # dbug(row)
+        new_row = []
+        for n, elem in enumerate(row):
+            # dbug(f"n: {n} mycolnames[{n}]: {mycolnames[n]}")
+            suffix = ""
+            if str(elem).endswith("%"):
+                elem = elem.strip("%")
+                suffix = "%"
+            new_elem = elem
+            if isnumber(elem):
+                if 'numpy' in str(type(elem)):
+                    import numpy
+                    elem = str(elem.item())
+                myrnd = ""
+                myhuman = ""
+                myneg = ""
+                """--== rnd? ==--"""
+                # dbug(f"elem: {elem} isnumber...")
+                if isinstance(rnd, dict):
+                    rnd_l = list(rnd.keys())
+                    # dbug(mycolnames[n])
+                    if mycolnames[n] in rnd_l:
+                        # dbug(f"mycolnames[n]: {mycolnames[n]} is in rnd_l: {rnd_l} with val rnd[mycolnames[n]]: {rnd[mycolnames[n]]}")
+                        # elem = cond_num(elem, rnd=rnd[mycolnames[n]])
+                        myrnd = rnd[mycolnames[n]]
+                        # dbug(f"elem: {elem}", 'ask')
+                    else:
+                        # dbug(f"Oooops mycolnames[n]: {mycolnames[n]} is not in rnd_l: {rnd_l}")
+                        myrnd = ""
+                if isinstance(rnd, int):
+                    # dbug(rnd)
+                    myrnd = rnd
+                """--== human? ==--"""
+                if isinstance(human, list):
+                    # dbug(f"chkg mycolnames[n]: {mycolnames[n]} in human: {human}")
+                    if mycolnames[n] in human:
+                        myhuman = True
+                        # dbug(f"Making myhuman: {myhuman} mycolnames[n]: {mycolnames[n]} n: {n}")
+                    else:
+                        myhuman = ""
+                if isinstance(human, bool) and human:
+                    if isnumber(elem):
+                        elem = str(elem).replace(",", "")
+                        if float(elem) > 1000:
                             myhuman = True
-                            # dbug(f"Making myhuman: {myhuman} mycolnames[n]: {mycolnames[n]} n: {n}")
-                        else:
-                            myhuman = ""
-                    if isinstance(neg, list):
-                        if mycolnames[n] in neg:
-                            myneg = True
-                        else:
-                            myneg = False
-                    # dbug(f"elem: {elem} myneg: {myneg} mycolnames[n]: {mycolnames[n]} neg: {neg}")
-                    new_elem = cond_num(elem, rnd=myrnd, human=myhuman, neg=myneg)
-                    # dbug(f"myrnd: {myrnd} myhuman: {myhuman} mycolnames[n: {n}]: {mycolnames[n]} elem: {elem} rnd_l: {rnd_l} human: {human} new_elem: {new_elem}")
-                new_row.append(new_elem)
-            new_lol.append(new_row)
-        lol = new_lol
+                """--== neg? ==--"""
+                if isinstance(neg, list):
+                    if mycolnames[n] in neg:
+                        myneg = True
+                        # dbug(f"neg: {neg} myneg: {myneg} elem: {elem} mycolnames[n]: {mycolnames[n]}")
+                    else:
+                        myneg = False
+                        # dbug(f"neg: {neg} myneg: {myneg} elem: {elem} mycolnames[n]: {mycolnames[n]}")
+                if isinstance(neg, bool) and neg:
+                    myneg = True
+                """--== new_elem ==--"""
+                # dbug(f"elem: {elem} myneg: {myneg} mycolnames[n]: {mycolnames[n]} neg: {neg}")
+                new_elem = cond_num(str(elem) + suffix, rnd=myrnd, human=myhuman, neg=myneg)
+                # dbug(f"myrnd: {myrnd} myhuman: {myhuman} mycolnames[n: {n}]: {mycolnames[n]} elem: {elem} rnd_l: {rnd_l} human: {human} new_elem: {new_elem}")
+            new_row.append(new_elem)
+        new_lol.append(new_row)
+    lol = new_lol
+    """--== At this point lol is fully ready??!! ==--"""
+    """--== Recurse if needed ==--"""
+    if cols > 1:
+        # need to break this lol into "chunks" and feed each chunk into gtables - then gcolumnize them TODO
+        # a header for each column/table will be assumed here
+        hdr = lol[0]  # this is needed for each call to gtable
+        lol_no_hdr = lol[1:]
+        size = len(lol) // cols
+        lols_l = chunkit(lol_no_hdr, size)
+        tbls = []
+        for lol in lols_l:
+            tbls.append(gtable(lol, 'hdr', colnames=hdr, title=title, footer=footer, neg=neg, human=human, rnd=rnd))
+        lines = gcolumnize(tbls)
+        scr_cols = int(get_columns())
+        max_ln_len = maxof(lines)  # they all should be the same length
+        if max_ln_len > scr_cols:
+            dbug(f"The length of lines: {max_ln_len} is greater than the available screen columns: {scr_cols}... returning")
+            return None
+        # printit(lines, 'boxed', title="debugging", footer=dbug('here'))
+        return lines
     """--== get max_elem_len[col] length for each col ==--"""
     # Now get max length for each column - in a series of steps using lol[0]
     num_cols = len(lol[0])
@@ -5688,7 +5980,7 @@ def gtable(lol, *args, **kwargs):
                 new_row = []  # init
                 for elem_num, elem in enumerate(row):
                     # for each elem in row - is it a list type ?
-                    if isinstance(elem, list):
+                    if isinstance(elem, list):  # muti-line
                         # start adding multi_line rows...  this is a multi_line elem (it is of list type)
                         # this is a multi_line elem so use the first item in that elem and increment elem_line_num
                         # elem_num_lines[elem_num] = len(elem)
@@ -5774,7 +6066,7 @@ def gtable(lol, *args, **kwargs):
                     myfill = fill
                     mypad = cell_pad
                     elem = str(elem)
-                    if col_num in rjust_cols or isnumber(elem):
+                    if col_num in rjust_cols or isnumber(elem.strip("%GMK+-")):
                         # right justify this elem
                         justified_elem = myfill + str(elem)
                     else:
@@ -5887,20 +6179,249 @@ def gtable(lol, *args, **kwargs):
                 f.write(line + "\n")
     # dbug("Returning new_lines")
     return new_lines
-    # ### EOB def do_watch_syms(filename=WATCH_FILE, outfile=WATCH_OUT_FILE): ### #
+    # ### EOB def gtable( ... ) ### #
+
+
+def gtable_demo():
+    """--== SEP_LINE ==--"""
+    tst_d = {"simple": "table", "goes": "here", "line three": "this is a very very long exstensive and verbose line or string", "line four": "If you thought that last line was long it was only because you had not come across this very long, exstensively verbose, long line."}
+    gtable(tst_d, 'prnt', 'centered', 'wrap', 'hdr', 'index', colnames=["col1", "col2"], title="tst_d dict w/wrap default col_limit=60", col_limit=60, footer=dbug('here'))
+    dbug('ask')
+    gtable(tst_d, 'prnt', 'centered', 'hdr', colname=["col1", "col2"], title="tst_d dict no wrap default col_limit=60", col_limit=60, footer=dbug('here'))
+    dbug('ask')
+    gtable(tst_d, 'prnt', 'centered', title="tst_d dict no wrap col_limit=140", col_limit=140, footer=dbug('here'))
+    gtable(tst_d, 'prnt', 'centered', 'wrap', title="tst_d dict w/wrap", footer=dbug('here'))
+    gtable(tst_d, 'prnt', 'centered', 'wrap', title="tst_d dict w/wrap and col_limit=30", footer=dbug('here'), col_limit=30)
+    dbug('ask', 'centered')
+    printit("Now run gtable with: tst_d dict w/hdr & end_hdr, wrap, alt, index and clolimit=30", 'centered')
+    box1 = gtable(tst_d, 'header', 'wrap', title="Short title w/wrap", footer=dbug('here'), end_hdr=True, col_limit=30)
+    box2 = gtable(tst_d, 'header', 'index', 'alt', 'wrap', title="Short title w/wrap, alt, and w/index", footer=dbug('here'), end_hdr=True, col_limit=30)
+    gcolumnize([box1, box2], 'prnt', 'centered', 'boxed', title="Two gtables boxed and centered", box_color="yellow! on black", footer=dbug('here'))
+    # dbug('ask', 'centered')
+    """--== SEP_LINE ==--"""
+    my_lol = [["name", "value", "make", "model"], ["two", "2", "foo", "bar"], ["twenty_two", "22", "bing", "bang"],
+            ["one", "1", "boom", "bam"], ["five", "5", "tik", "tok"], ["three", "3", "string", "strum"], ["four", "4", "ping", "pong"]]
+    title = "with hdr and alt"
+    gtable(my_lol, 'prnt', 'centered', 'hdr', 'alt', alt_clr="rgb(50,50,50)", title=title, footer=dbug('here'))
+    """--== SEP_LINE ==--"""
+    my_d = {"col1": 1, "col2": 2, "col3": 3, "col4": 4, "col5": "col5 with a very very long winded line that has man many chacters in it. Do not be alarmed by it's length", "col6": ["This is six", "another line"], "col7": 7}
+    colnames = ["col1", "col2", "col3", "col4", "col5", "col6"]
+    gtable(my_d, 'prnt', 'hdr', title="Simple Dictionary w/colnames and now with header and colnames", footer=dbug('here'), colnames=colnames)
+    print()
+    title = "with hdr and sortby=1"
+    gtable(my_lol, 'prnt', 'hdr', 'centered', sortby=1, title=title, footer=dbug('here'))
+    dbug('ask')
+    title = "with hdr and sortby=value"
+    gtable(my_lol, 'prnt', 'hdr', 'centered', sortby="value", title=title, footer=dbug('here'))
+    title = "with hdr and sortby_n=value"
+    gtable(my_lol, 'prnt', 'hdr', 'centered', sortbyn="value", title=title, footer=dbug('here'))
+    dbug('ask')
+    title = "with hdr and sortby_n=value filterby value: 2"
+    gtable(my_lol, 'prnt', 'hdr', 'centered', sortbyn="value", filterby={'value': '2'}, title=title, footer=dbug('here'))
+    title = "with hdr and sortby_n=value filterby value: 2 select_cols=[name, value, make]"
+    gtable(my_lol, 'prnt', 'hdr', 'centered', sortbyn="value", filterby={'value': '2'}, select=['name', 'value', 'make'], title=title, footer=dbug('here'))
+    dbug('ask')
+    gtable(my_lol, 'prnt', 'hdr', 'centered', 'end_hdr', sortbyn="value", filterby={'value': '2'}, select=['name', 'value', 'make'], title=title, footer="with end_hdr" + dbug('here'))
+    """--== SEP_LINE ==--"""
+    printit(gtable.__doc__, 'boxed', 'centered', title=" gtable() doc ", footer=dbug('here'), box_color="yellow! on black!")
+    askYN("Continue: ", 'centered')
+    csv_lines = """
+    sym,lpr,chg,pchg,trgt,ask,iv,pom,cp,date,blks,pc,pp,sr,pe,fpe,div,roe,rl,rh,fv,mv,peg,shrs,acnt,misc,misc2,status,score,rng_pcnt,avg,mcap,ps,pb,cps,cr,dr,beta,eps,div5yr,pinst,pinsdr,ma200,ma50,notes,rundate
+AVGO,  520.86,  -29.27,  -5.32,  450.0,  70,  31.0,  95,  535.48,  20220730,  1,  P,  __,  A+,  25,  12,  15.9,  39,  463,  678,  302,  624,  1.09,  xxx,  1510,  ,  ,  ,  80.0,  26.91,  76.5,  210936823808,  7.03,  10,  22.3,  2,  188.02,  1.1,  20.19,  2.96,  82.11,  2.35,  570.38,  517.43,  *t,  20220827
+ALSN,  37.14,  -1.24,  -3.23,  30.0,  045,  50.0,  82,  35.30,  20220412,  2,  P,  __,  C_,  08,  06,  0.8,  62,  32,  42,  69,  ___,  0.55,  xxx,  1510,  ,  ,  ,  60.0,  51.4,  54.0,  3574528256,  1.4,  5,  1.28,  2,  336.98,  0.92,  4.62,  1.62,  102.23,  0.84,  38.2,  38.49,  *t,  20220827
+AMAT,  98.80,  -6.2,  -5.9,  85.0,  60,  47.0,  87,  98.80,  20220828,  1,  P,  __,  B+,  13,  12,  1,  55,  82,  168,  112,  142,  1.1,  xxx,  1510,  22sep85in@60,  , ofrd22sep_P:NO,  80.0,  19.53,  80.0,  85950767104,  3.42,  7,  4.11,  2,  45.2,  1.51,  7.47,  1.18,  78.48,  0.35,  124.2,  99.13,  ,  20220828
+BABA,  98.00,  -1.89,  -1.89,  75.0,  129,  73.0,  80,  89.37,  20220730,  1,  P,  ___,  _+,  45,  11,  0,  02,  73,  183,  32,  100,  316.17,  xxx,  1510,  audit_probs_SEC,  ,  ,  30.0,  22.73,  53.5,  260032233472,  0.3,  0,  174.82,  2,  16.91,  0.58,  2.16,  None,  16.44,  0.01,  109.8,  102.31,  *t,  20220827
+BAC,  34.03,  -1.11,  -3.16,  28.0,  11,  35.0,  92,  33.05,  20220727,  1,  P,  __,  C+,  10,  09,  0.84,  10,  29,  51,  48,  41,  1.58,  xxx,  1510,  ,  ,  ,  60.0,  22.86,  68.5,  273439211520,  2.99,  1,  88.88,  0.0,  0.0,  1.4,  3.2,  2,  70.88,  0.12,  39.99,  33.29,  *t,  20220827
+    """
+    csv_l = csv_lines.split("\n")
+    csv_l = [line for line in csv_l if line != '' and not line.isspace()]  # get rid of empty lines
+    csv_lol = []
+    for row in csv_l:
+        elems = row.split(",")
+        elems = [str(elem).strip() for elem in elems]
+        csv_lol.append(elems)
+    selected = csv_lol[0][:20]
+    selected.append('div5yr')
+    gtable(csv_lol, 'hdr', 'prnt', 'centered', 'alt', title="Selected data from a csv file and selected columns w/alt", footer="alt_color: default " + dbug('here'), selected=selected)
+    print()
+    gtable(csv_lol, 'hdr', 'prnt', 'centered', 'alt', alt_color="on rgb(60,60,100)", pad='', title="Selected columns, alt and w/o padding", footer="alt_color: 'on rgb(60,60,100)' " + dbug('here'), selected=selected)
+    print()
+    gtable(csv_lol, 'prnt', 'hdr', 'centered', pad='', col_colors=[], title="Selected columns and w/o padding no column_colors", footer=dbug('here'), selected=selected)
+    dbug('ask')
+    """--== SEP_LINE ==--"""
+    my_d = {"one": 1, "two": 2, "three": 3, "four": 4, "One thousand": 1000, "One million": 1000000, "col 7": "    this has lots of white space    "}
+    gtable(my_d, 'prnt', 'centered', title="Simple Dictionary", footer=dbug('here'))
+    print()
+    box1 = gtable(my_d, 'prnt', 'centered', 'strip', pad='', title="cell_pad=''")
+    dbug('ask')
+    box2 = gtable(my_d, 'prnt', 'hdr', title="Simple Dictionary w/header", footer=dbug('here'))
+    print()
+    box3 = gtable(my_d, 'prnt', 'hdr', title="Simple Dictionary w/header colnames=keys", footer=dbug('here'), colnames="keys")
+    print()
+    gtable(my_d, 'prnt', 'hdr', title="Simple Dictionary w/header colnames=keys exclude=['three']", exclude=['three'], footer=dbug('here'), colnames="keys")
+    print()
+    gtable(my_d, 'prnt', title="Simple Dictionary colnames=keys", footer=dbug('here'), colnames="keys")
+    print()
+    printit(gcolumnize([box1, box2]), 'boxed', box_color="red! on black", title="Two Boxes", footer=dbug('here'))
+    print()
+    printit(gcolumnize([box1, box2]), 'boxed', 'centered', box_color="red! on black", title="Two Boxes centered", footer=dbug('here'))
+    dbug('ask')
+    """--== SEP_LINE ==--"""
+    my_d = {"one": 1, "two": 2, "three": 3, "four": 4, "One thousand": 1000, "One million": 1000000, "col 7": "    this has lots of white space    "}
+    colnames = ["column one", "column two", "column three", "column four", "column five", "column six", "column seven"]
+    box1 = gtable(my_d, 'prnt', title="Simple Dictionary", footer=dbug('here'))
+    print()
+    box2 = gtable(my_d, 'prnt', 'hdr', title="Simple Dictionary w/header", footer=dbug('here'))
+    print()
+    printit(gcolumnize([box1, box2]), 'centered')
+    print()
+    dbug('ask')
+    box3 = gtable(my_d, 'prnt', title="Simple Dictionary", footer=dbug('here'))
+    box4 = gtable(my_d, 'prnt', 'hdr', title="Simple Dictionary w/header", footer=dbug('here'))
+    box5 = gtable(my_d, 'prnt', title="Simple Dictionary w/colnames='keys'", footer=dbug('here'), colnames="keys")
+    box6 = gtable(my_d, 'prnt', title="Simple Dictionary w/colnames", footer=dbug('here'), colnames=colnames)
+    dbug("GOing to box7...", 'ask')
+    dbug(my_d)
+    box7 = gtable(my_d, 'prnt', 'hdr', title="Simple Dictionary w/colnames w/header", footer=dbug('here'), colnames=colnames)
+    dbug("Stop",'ask', 'boxed', box_color="red! on rgb(80,30,80)")
+    print()
+    printit(gcolumnize([box1, box2]) + box3, 'centered', 'boxed', title="Two boxes in one row and another box in the next", footer=dbug('here'))
+    print()
+    gtable(my_d, 'prnt', 'centered', 'hdr', title="Simple dictionary w/header", footer=dbug('here'))
+    dbug('ask', 'centered')
+    my_l = list(my_d.values())
+    my_l.append(12345)
+    my_l.append(123.45)
+    # dbug(my_l)
+    colnames = ["column one", "column two", "column three", "column four", "column five", "column six", "big column", "Integer", "Float"]
+    # dbug(colnames)
+    # dbug(my_l)
+    gtable(my_l, 'prnt', 'centered', title="Simple list of values", footer=dbug('here'))
+    print()
+    gtable(my_l, 'prnt', 'centered', 'hdr', title="Simple list of values w/header and colnames", footer=dbug('here'), colnames=colnames)
+    print()
+    colnames = []
+    for x in range(len(my_l)):
+        colnames.append(x)
+    # dbug(colnames)
+    # dbug(my_l)
+    gtable(my_l, 'prnt', 'centered', 'hdr', title="Simple list of values w/header and colnames", footer=dbug('here'), colnames=colnames)
+    print()
+    # dbug(list(my_d.values()))
+    dbug('ask', 'centered')
+    """--== SEP_LINE ==--"""
+    my_lol = [
+            ["col1", "col2", "col3", "col4", "col5", "col6", "col7"],
+            [1, 2, 3,4 , 5, 6, 7],
+            ["11", "22", "33", "44", "55", "66", "77"],
+            ["111", "222", "333", "444", "555", "666", "777"],
+            ["1111", "2222", "3333", "4444", "5555", "6666", "7777"]
+            ]
+    gtable(my_lol, title="Simple list of lists (lol)", footer=dbug('here'))
+    print()
+    gtable(my_lol, 'prnt', 'hdr', title="Simple list of lists (lol) w/header", footer=dbug('here'))
+    selected_cols = ["col2", "col4", "col6"]
+    printit(f"Simple list of lists (lol) w/header & selected_cols: {selected_cols}")
+    gtable(my_lol, 'prnt', 'hdr', selected_cols=selected_cols)
+    dbug('ask', 'centered')
+    """--== SEP_LINE ==--"""
+    tst_d = {"simple": "table", "goes": "here", "line three": "this is a very very long exstensive and verbose line or string", "line four": "If you thought that last line was long it was only becuse you had not come across this very long, exstensively verbose, long line."}
+    gtable(tst_d, 'prnt', 'centered', title="tst_d dict no wrap", footer=dbug('here'))
+    gtable(tst_d, 'prnt', 'centered', 'wrap', title="tst_d dict w/wrap", footer=dbug('here'))
+    gtable(tst_d, 'prnt', 'centered', 'wrap', title="tst_d dict w/wrap and col_limit=30", footer=dbug('here'), col_limit=30)
+    printit("Now run gtable with: tst_d dict w/hdr & end_hdr, wrap, alt, index and clolimit=30")
+    gtable(tst_d, 'prnt', 'header', 'index', 'alt', 'wrap', alt_color='on rgb(25,25,25)', title="Short title", footer=dbug('here'), end_hdr=True, col_limit=30)
+    print()
+    dbug('ask', 'centered')
+    """--== SEP_LINE ==--"""
+    tst_d = {"first": ['pupose: re-writes a file with an added line (after or before a pattern) or replace a line, or append a line', '-    I wrote this because I am constantly building csv files with a header line '], "one": 1, "two": [2, 2], "three": 3, "four": ['pupose: re-writes a file with an added line (after or before a pattern) or   replace a line, or append a line', '-    I wrote this because I am constantly building csv files with a header line ']}
+    gtable(tst_d, 'prnt', 'centered' 'wrap', footer=dbug('here'))
+    tst_d = {'add_content': ['pupose: re-writes a file with an added line (after or before a pattern) or replace a line, or append a line', '-    I wrote this because I a  m constantly building csv files with a header line '], "next": 4}
+    gtable(tst_d, 'prnt', 'wrap', 'centered')
+    dbug('ask', 'centered')
+    """--== SEP_LINE ==--"""
+    my_d = {"col1": 1, "col2": 2, "col3": 3, "col4": 4, "col5": 5, "col6": [6, "This is six", "another line"]}
+    gtable(my_d, "prnt", 'centered', title="testing", footer=dbug('here'))
+    my_d = {"col1": 1, "col2": 2, "col3": 3, "col4": 4, "col5": "col5 with a very very long winded line that has man many chacters in it. Do not be alarmed by it's length", "col6": ["This is six", "another line"], "col7": 7}
+    gtable(my_d, "prnt", 'centered', 'wrap', title="testing", footer=dbug('here'))
+    # dbug('ask')
+    kv_cols(my_d, 2, 'prnt','centered',  title="kv_cols 2 columns", footer=dbug('here'))
+    kv_cols(my_d, 2, 'prnt', 'centered', 'boxed', title="kv_cols 2 columns boxed ", footer=dbug('here'), mstr_box_color="blue! on white")
+    dbug('ask')
+    # nums = [1, 20, 40, 3, 33, 55, 11, "21"]
+    # dbug(nums)
+    # dbug(sorted(nums, key=lambda x: float(x)))
+    """--== SEP_LINE ==--"""
+    import pandas as pd
+    my_df = pd.DataFrame(my_lol)
+    # my_df.rename(columns=my_df.iloc[0]).drop(my_df.index[0])  # uses the first row as colnames and uses the rest of the rows for the df
+    gtable(my_df, 'prnt', 'centered', 'end_hdr', colnames="firstrow", title="Using a df", footer="with end_hdr")
+    my_d = {"col1": 1, "col2": 2, "col3": 3}
+    gtable(my_d, 'prnt', 'hdr', 'centered', 'shadowed', 'human', title=dbug('here'), footer="gtable demo", colnames=["Key", "Value"])
+    dbug('ask')
+    sym = "CVS"
+    with Spinner(f"Working on getting info for Ticker: {sym} then gtable(sym.info...): ", 'elapsed', 'centered'):
+        try:
+            import yfinance as yf
+            sym = yf.Ticker(sym)
+            my_d = sym.info
+            # dbug(my_d)
+            # dbug(type(my_d))
+            # dbug(len(my_d))
+            # dbug(type(my_d[0]))
+            print()
+            gtable(my_d, 'prnt', 'centered', 'hdr', 'shadowed', title=dbug('here'), footer=" gtable demo ")
+            # if r is None:
+            #    dbug('ask')
+        except Exception as Error:
+            dbug(Error)
+            dbug('ask')
+    print()
+    kv_cols(my_d, 2, 'prnt', 'centered', title="kv_cols(my_d)", footer=dbug('here'))
+    dbug('ask')
+    """--== SEP_LINE ==--"""
+    my_lol = [["Asset", "type", "value", "age"],
+            ["house", "cape cod", "120,000", "55yrs"],
+            ["car", "CX5", 3000, 7],
+            ["Vermeer", "The Girl with a Pearl Earing", 30000000, 357],
+            ["Magic Kit", "With case", 300.4657, 82],
+            ["coin", "kugarand", "[1600]", 45]]
+    """--== SEP_LINE ==--"""
+    title = "  Need a very long, desparately long, and  wider than usaual title " + dbug('here')
+    gtable(my_lol, 'prnt', 'hdr', 'centered', 'human', title=title, footer=" gtable demo " + dbug('here'))
+    """--== SEP_LINE ==--"""
+    # dbug(f"Now run gtable for my_lol[0]: {my_lol}")
+    gtable(my_lol[0], 'prnt', 'centered', title="keys only ", footer=dbug('here'))
+    # dbug(my_lol[0])
+    dbug('ask')
+    """--== SEP_LINE ==--"""
+    title = "list-of-lists"
+    gtable(my_lol, 'prnt', 'hdr', 'centered', 'human', rnd=2, title=title, footer=" gtable demo ")
+    # gtable(my_lol, 'prnt', 'hdr', 'human', rnd=2,  title=title, footer=" gtable demo " + dbug{'here'})
+    """--== SEP_LINE ==--"""
+    my_d = {"one": 1, "two": 2, "three": 3, "four": 4, "One thousand": 1000, "One million": 1000000}
+    kv_cols(my_d, 2, 'prnt', 'centered', title="kv_cols(my_dictionary, cols=2)", footer=dbug('here'))
+    kv_cols(my_d, 2, 'prnt', 'centered', 'boxed', box_color="red!", mstr_box_clr="yellow!", title="kv_cols(my_dictionary, cols=2) boxed", footer=dbug('here'))
+    # ### EOB def gtable_demo(): ### #
 
 
 def chunkit(my_l, size, *args, **kwargs):
     """
-    purpose: break a list into a list of chunks
+    purpose: break a list into a list of chunks - each chunk having size=size
     requires: my_l: list (eg boxes), size: int
     options:
-        - full: bool   # puts empty "cells" to make all list chunks the same number of elems
+        - full: bool   # puts empty "cells" to make all "list chunks" the same number of elems
+        - cols: bool   # turn size into number of chunks or cols
+            note: you can do this yourself eg size = len(my_l) // cols  # where cols = number of columns <-- this method would probably less confusing
     returns: a list of lists(chunks)
-    used: in a dashboard columns of boxes - see gcolumnize
+    note: this is used: in a dashboard columns of boxes - see gcolumnize and in gtables
     """
     """--== Config ==--"""
     full_b = bool_val(["full", "even", "equal"], args, kwargs, dflt=False)
+    cols = bool_val(["cols", "chunks", "columns"], args, kwargs, dflt=False)
+    """--== Init ==--"""
+    if cols:
+        size = len(my_l) // size
     """--== Process ==--"""
     def divide_chunks(my_l, n):
         # looping till length my_l
@@ -6020,7 +6541,7 @@ def split_codes_demo(my_s=gclr('red')+"test string"+gclr('reset'), *args, **kwar
 def cond_num(elem, *args, **kwargs):
     # #############
     """
-    purpose: this conditions (colorizes and adds commas) elems if they are numbers
+    purpose: this conditions (colorizes, rounds, and adds commas and unit indicators) elems if they are numbers
     input: elem
     options: "neg_color=red on black!": str, pos_color="green! on black!": str, rnd=0: int
     -   color: bool         # will color the number ... default red for negative and green for positive
@@ -6057,6 +6578,12 @@ def cond_num(elem, *args, **kwargs):
     # dbug(rnd)
     # if "%" in elem:
     #     elem = elem
+    """--== Convert ==--"""
+    # TODO = if dict then convert all values
+    #        if list convert all values
+    if 'numpy' in str(type(elem)):
+        import numpy
+        elem = elem.item()
     """--== Init ==--"""
     # last_msg = ""
     RESET = sub_color('reset')
@@ -6074,7 +6601,9 @@ def cond_num(elem, *args, **kwargs):
     if nan != "":
         if str(elem).lower() == "nan":
             elem = str(nan)
-    if isnumber(elem) and not str(elem).startswith("_"):
+    suffix = ""
+    tst_elem = elem.strip("%GMKi+-")
+    if isnumber(tst_elem) and not str(elem).startswith("_"):
         suffix = prefix = ""
         if str(elem).endswith("G"):
             elem = elem.replace("G", "")
@@ -6106,7 +6635,7 @@ def cond_num(elem, *args, **kwargs):
             if elem_val < 0:
                 # codes[0] = NEG_COLOR
                 prefix = NEG_COLOR
-                # dbug(f"setting {NEG_COLOR}color{RESET}")
+                # dbug(f"setting {NEG_COLOR}color{RESET} for elem_val: {elem_val}")
                 # elem = f"{NEG_COLOR}{elem_val}"
             else:
                 # codes[0] = POS_COLOR
@@ -6114,27 +6643,34 @@ def cond_num(elem, *args, **kwargs):
                 # dbug(f"POS_COLOR: {POS_COLOR} {repr(POS_COLOR)}")
                 # elem = f"{POS_COLOR}{elem_val}"
         if human:
+            # dbug(human)
+            # dbug(elem_val)
             if not str(elem_val).endswith(("B", "M", "K", "G", "T", "Kb", "Mb", "%")):
                 if float(elem_val) > 1000000000:
-                    elem_val = float(elem_val) // 1000000000
+                    elem_val = float(elem_val) / 1000000000
                     elem_val = str(round(elem_val, 2)) + "B"
             if not str(elem_val).endswith(("B", "M", "K", "G", "T", "Kb", "Mb", "%")):
                 try:
                     if float(elem) > 1000000:
-                        elem_val = float(elem_val) // 1000000
+                        elem_val = float(elem_val) / 1000000
                         elem_val = str(round(elem_val, 2)) + "M"
                 except Exception as Error:
                     dbug(f"Error: {Error} elem_val: {elem_val}")
+            # dbug(elem_val)
             if not str(elem_val).endswith(("B", "M", "K", "G", "T", "Kb", "Mb", "%")):
                 if float(elem_val) > 1000:
-                    elem_val = float(elem_val) // 1000
-                    if rnd > 0:
-                        elem_val = str(round(elem_val, 2)) + "K"
+                    elem_val = float(elem_val) / 1000
+                    # dbug(rnd)
+                    if isnumber(rnd) and int(rnd) > 0:
+                        elem_val = str(round(elem_val, rnd)) + "K"
+            # dbug(elem_val)
             if "," in str(elem_val):
                 elem_val = str(elem_val).replace(",", "")
                 elem_val = "'" + elem_val + "'"
+            # dbug(elem_val)
             if str(elem_val).replace(".", "").isnumeric():
                 elem_val = f"{float(elem_val):,}"
+            # dbug(elem_val)
         elem = prefix + str(elem_val) + suffix
     if rset:
         elem += RESET
@@ -6183,81 +6719,6 @@ def get_random_line(file, prnt=False, *args, **kwargs):
         printit(centered(lines))
     return line
     # ### EOB def get_random_line(file, prnt=False): ### #
-
-
-# # ###################################
-# def print_table(my_d, prnt=False, col_l=None, title=""):  # noqa:
-#     # ################################
-#     """
-#     Pretty_print a list of dictionaries (my_d) as a dynamically sized table.  # noqa:
-#     If column names (colList) aren't specified, they will show in random order.
-#     Author: Thierry Husson - Use it as you want but don't blame me.
-#     #>>> print_table({"one":1,"two":2,"three":3})
-#     =================================================
-#     || one                  |                 1.00 ||
-#     || two                  |                 2.00 ||
-#     || three                |                 3.00 ||
-#     =================================================
-#     """
-#     dbug("who uses this")
-#     # if not colList: colList = list(myDict[0].keys() if myDict else [])
-#     # myList = [colList] # 1st row = header
-#     # for item in myDict: myList.append([str(item[col] or '') for col in colList])  # noqa:
-#     # colSize = [max(map(len,col)) for col in zip(*myList)]
-#     # formatStr = ' | '.join(["{{:<{}}}".format(i) for i in colSize])
-#     # myList.insert(1, ['-' * i for i in colSize]) # Seperating line
-#     # for item in myList: print(formatStr.format(*item))
-#     llen = 49
-#     lines = []
-#     if prnt:
-#         top_line = "=" * llen
-#         if len(title) > 1:
-#             top_line = do_title(title=title, chr="=", length=llen, prnt=False)
-#         print(top_line)
-#     lines.append("=" * llen)
-#     # dbug(my_d)
-#     # dbug(type(my_d))
-#     for k, v in my_d.items():
-#         if k == "" and v == "":
-#             continue
-#         k = k.replace("\n", '')
-#         if isnumber(v):
-#             # dbug(f"k:{k} v:{v}")
-#             if int(v) > 1000000:
-#                 v = int(v / 1000000)
-#                 v = str(v) + "M"
-#                 # print(f"|| {k:<20} | {v:>20} ||")
-#                 line = "|| {:<20} | {:>20} ||".format(k, v)
-#                 # print("|| {:<20} | {:>20} ||".format(k, v))
-#                 if prnt:
-#                     print(line)
-#                 lines.append(line)
-#             else:
-#                 # print(f"|| {k:<20} | {v:>20.2f} ||")
-#                 if isinstance(v, str):
-#                     line = "|| {:<20} | {:>20} ||".format(k, v)
-#                     # print("|| {:<20} | {:>20} ||".format(k, v))
-#                 else:
-#                     line = "|| {:<20} | {:>20.2f} ||".format(k, v)
-#                     # print("|| {:<20} | {:>20.2f} ||".format(k, v))
-#                 if prnt:
-#                     print(line)
-#                 lines.append(line)
-#         else:
-#             if v is None:
-#                 v = "na"
-#             # dbug(f"k:{k} v:{v}")
-#             # print(f"|| {k:<20} | {v:>20} ||")
-#             line = "|| {:<20} | {:>20} ||".format(k, v)
-#             if prnt:
-#                 print(line)
-#             lines.append(line)
-#     line = "=" * llen
-#     if prnt:
-#         print(line)
-#     lines.append(line)
-#     return lines
-#     # EOB #
 
 
 # #########################################
@@ -6421,6 +6882,7 @@ def grep_lines(lines, pattern, *args, **kwargs):
     """--== Process ==--"""
     matched_lines = []
     for line in lines:
+        line = str(line)
         # dbug(line)
         # this might have been taken from a list of list (lol) so convert the list to a csv style line
         if csv_b or isinstance(line, list):
@@ -6436,6 +6898,8 @@ def grep_lines(lines, pattern, *args, **kwargs):
             rex_b = re.search(pattern, line, re.I)
         else:
             # case sensitive
+            # dbug(pattern)
+            # dbug(line)
             rex_b = re.search(pattern, line)
         if rex_b:
             # use the regex set above
@@ -6746,7 +7210,8 @@ def escape_ansi(line, *args, **kvargs):
     # else:
     #     line = str(line)
     """--== Process ==--"""
-    ansi_escape = re.compile(r"(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]")
+    # ansi_escape = re.compile(r"(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]")
+    ansi_escape = re.compile(r'\x1b[^m]*m')  # suggested by chatGPT
     # ansi_escape2 = re.compile(r"\[\d+.*?m")  # not needed???????
     # ansi_escape2 = re.compile(r"(?:\x1b[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]")
     # ansi_escape3 = re.compile(r"(?:\033[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]")
@@ -6893,6 +7358,7 @@ def cinput(prompt, *args, **kwargs):
         except:
             sys.exit()
     return ans
+    # ### EOB def cinput(prompt, *args, **kwargs): ### #
 
 
 # ##############################################
@@ -7428,7 +7894,7 @@ def max_width_lol(input_table):
 def comma_split(my_s, *args, **kwargs):
     # ################
     """
-    purpose: split a line (or list of lines) using commas unless the comma is embedded in quotes
+    purpose: split a line/str (or list of lines) using commas unless the comma is embedded in quotes
     returns: list (or list od lists) of comma separated elements
     notes: this is a kludge but it works for me
     """
@@ -7501,25 +7967,73 @@ def comma_split_demo(*args, **kwargs):
 ##    dbug(comma_split(s))
 
 
-
 def comma_join(data, *args, **kwargs):
     """
-    purpose: given a data list or rows with columns (a list of lists)
+    purpose: given a list of elems or list or lists (of elems
             this function will turn each row into a proper comma delimited string or line
-    options: none so far
+            The reason for this function is to take a list and make *sure* it is a proper csv list - with quoted elems as needed
+    options:
+        - newlines = bool - False  # to be used if you want to add a newline to the end of the line(s)
     returns: a list of comma delimited strings (lines) typically used for csv
     notes: this has not been fully tested yet
     """
-    lines = []
-    for row in data:
-        line_l = [] 
-        for col in row:
-            if "," in col or "'" in col:
-                col = '"' + col + '"'
-            line_l.append(col)
-        lines.append(",".join(line_l))
-    # dbug(lines, 'lst')
-    return lines
+    """--== Debugging ==--"""
+    # dbug(funcname())
+    # dbug(data)
+    # dbug(data[:3])
+    # dbug(args)
+    # dbug(kwargs)
+    """--== Config ==--"""
+    newline_b = bool_val(["newlines", "newline"], args, kwargs, dflt=False)
+    """--== Init ==--"""
+    line = ""
+    elems = []
+    """--== Convert ==--"""
+    if isinstance(data, str):
+        dbug("Nothing to do ... comma_join needs a list...")
+        return
+    if islol(data):
+        rtrn_l = []
+        for row in data:
+            new_ln = comma_join(row, newline=newline_b)
+            rtrn_l.append(new_ln)
+        return rtrn_l
+    # dbug(data)
+    """--== SEP_LINE ==--"""
+    for elem in data:
+        # dbug(elem)
+        elem = str(elem)
+        if "," in elem or "'" in elem:
+            elem = '"' + elem + '"'
+        elems.append(elem)
+    line = ", ".join(elems)
+    # dbug(line, 'lst')
+    # if not lol_flag:
+    #     dbug(lines)
+    #     # this is such a kludge to deal with a simple list
+    #     if len(lines) == 1:
+    #         lines = lines[0]
+    if newline_b:
+        # dbug(newlines)
+        line = str(line) + "\n"
+    # dbug(f"Returning line: {line}...")
+    return line
+    # ### EOB def comma_join(data, *args, **kwargs): ### #
+
+
+def comma_join_demo(*args, **kwargs):
+    """
+    WIP
+    """
+    my_l = ["Date Time", "Values", "value, with a comma"]
+    print(f"my_l: {my_l}")
+    comma_line = comma_join(my_l)
+    printit(comma_line, 'boxed', title="list is now comma delinted string")
+    print("-"*40)
+    my_lol = [my_l, ["2022-01-22 09:44", 64]]
+    print(f"my_lol: {my_lol}")
+    comma_lines = comma_join(my_lol)
+    printit(comma_lines, 'lst', 'boxed', title="lol is now list of comma delimited string", footer=dbug('here'))
 
 
 # ##################################
@@ -7806,33 +8320,48 @@ def retry(howmany, *exception_types, **kwargs):
 
 
 # ########################################################################
-def get_html_tables(url="", *args, show=False, timeout=10, **kwargs):
+def get_html_tables(url="", *args, timeout=10, **kwargs):
     # ####################################################################
     """
-    input: url, display (tables with tabulate), access defaults to selenium which is slow but gets by bot blocks to url request
-    returns: list of panda dataframes
+    purpose: to pull/scrape all tables off an url
+    required:  url
     requires:
         import pandas as pd
         from selenium import webdriver
-        # from fake_useragent import UserAgent
+    options:
+        - show|prnt: bool  # default=False ... whether to print the tables
+        - spinner: bool    # default=False ... whether to show a spinner while fetching data
+    returns: list of panda dataframes
     """
+    """--== Debugging ==--"""
     # dbug(funcname())
     """--== Config ==--"""
-    show = bool_val(["show", 'prnt', 'verbose', 'print'], args, kwargs, dflt=show)
-    """--== SEP_LINE ==--"""
+    show = bool_val(["show", 'prnt', 'verbose', 'print'], args, kwargs, dflt=False)
+    spinner_b = bool_val(["spinner"], args, kwargs, dflt=False)
+    """--== Validation(s) ==--"""
     try:
         import pandas as pd
     except Exception as e:
         print(f"Needs pandas ... Error: {e}")
+    """--== Imports ==--"""
     from selenium import webdriver
-    from selenium.webdriver.common.keys import Keys
-    # options = webdriver.FirefoxOptions()
-    # options.set_headless()
-    # driver = webdriver.Firefox(executable_path="./bin/geckodriver", firefox_options=options)
+    from selenium.webdriver.firefox.options import Options
+    # from selenium.webdriver.common.keys import Keys
+    """--== Init ==--"""
+    options = Options()
+    options.headless = True
+    # driver = webdriver.Firefox(executable_path="./bin/geckodriver", options=options)
     try:
         # driver = webdriver.Firefox(executable_path="./bin/geckodriver")
-        driver = webdriver.Firefox()
-        driver.get(url)
+        driver = webdriver.Firefox(options=options)
+        if spinner_b:
+            my_options = {}
+            # if isinstance(spinner, dict):
+                # my_options = spinner
+            with Spinner(f"Fetching tables from url: {url}...", spinner_clr="red", elapsed=True, elapsed_clr="yellow! on black"):
+                driver.get(url)
+        else:
+            driver.get(url)
     except Exception as e:
         dbug("See: \nhttps://selenium-python.readthedocs.io/installation.html#drivers ... for drivers")
         dbug(f"Web driver failed on url: {url}... Error: {e}")
@@ -7840,24 +8369,22 @@ def get_html_tables(url="", *args, show=False, timeout=10, **kwargs):
         dbug("Note: install the browser (firefox) executable manually... not with snap")
         dbug(f"Get url: {url} failed.... Error: {e}")
         return
+    """--== Process ==--"""
     content = driver.page_source
-    """--== SEP_LINE ==--"""
-    time.sleep(1)
+    # time.sleep(1)
     try:
         tables = pd.read_html(content)
     except Exception as Error:
-        dbug(f"No tables found.... Error: {Error}")
+        dbug(f"No tables found for url: {url}.... Error: {Error}")
         return
-    # here is what you can do with returned df tables
+    """--== SEP_LINE ==--"""
     if show:  # this is for debugging
-        dbug(url)
-        dbug(f"There are {len(tables)} tables")
-        from tabulate import tabulate
-        cnt = 0
+        dbug(f"There are {len(tables)} tables for url: {url}")
+        cnt = 1
         for table in tables:
             # dbug(type(table))
             dbug(f"Printing table: {cnt} of {len(tables)} tables from url: {url}")
-            print(tabulate(table, headers='keys', tablefmt='psql', showindex=False))
+            gtable(table, 'hdr', 'prnt')
             cnt += 1
     try:
         driver.close()
@@ -8898,12 +9425,14 @@ def gblock(msgs_l, *args, **kwargs):
     # dbug(f"max_len: {max_len} screen_width: {screen_width}")
     if max_len >= screen_width:
         dbug(f"It appears that the requested content length {max_len} exceeds the (approx) terminal screen available width {screen_width}", 'boxed', 'centered')
+        new_lines2 = wrapit(new_lines2, length=screen_width)
+        # ruleit()
         # dbug(f"real screen width = {get_columns()}")
         for ln in new_lines2:
             if nclen(ln) > screen_width:
                 dbug(f"This line is too long: [{ln}]")
         # dbug(new_lines2, 'lst')
-        return None
+        # return None
     """--== SEP_LINE ==--"""
     rtrn_lines = printit(new_lines2, boxed=boxed_b, centered=centered, title=title, footer=footer, box_color=box_color, color=color, prnt=prnt, pad=pad, txt_center=txt_center)
     return rtrn_lines
@@ -9217,6 +9746,149 @@ def long_proc(msg="testing long process", *args, **kwargs):
     # ### EOB def long_proc(msg="testing long process", *args, **kwargs): ### #
 
 
+def usr_input(prompt="Your input: ", *args, **kwargs):
+    """
+    WIP
+    purpose: allow user input with editing
+    input: 
+        - prompt: str = "Your input: "
+        - edit: bool
+        - dft: str
+        - centered: bool
+        - shift: int
+        - update: dict
+        - length: int = 0       # all lines will display with the same length
+    returns: edit or input data as str or dict if update option
+    """
+    """--== Debugging ==--"""
+    # dbug(funcname())
+    # dbug(args)
+    # dbug(kwargs)
+    """--== Import ==--"""
+    import readline
+    """--== Config ==--"""
+    centered_b = bool_val(["centered", "center", "cntr"], args, kwargs, dflt=False)
+    shift = kvarg_val(["shift", "shft"], kwargs, dflt=0)
+    # dbug(shift)
+    prompt = kvarg_val("prompt", kwargs, dflt=prompt)
+    default = kvarg_val(["dflt", 'default'], kwargs, dflt=None)
+    edit = bool_val(["edit", "editable", 'edt'], args, kwargs, dflt=False)
+    update = kvarg_val(["update"], kwargs, dflt={})
+    max_val_len = kvarg_val(["max_v", "max_v_len", "max_val", "max_val_len"], kwargs, dflt=0)
+    noedit_b = bool_val(["noedit", "no_edit", "noinput", "no_input"], args, kwargs, dflt=False)
+    """--== Validate ==--"""
+    if edit and default is None and len(update) == 0:
+        dbug("Edit has been invoked but there is no default|dflt which is needed or make default='' ...")
+        return None
+    # dbug(f"edit: {edit} update: {update} centered: {centered_b} shift: {shift} default={default}")
+    """--== Init ==--"""
+    if prompt is None:
+        prompt = "none"
+    if default is None or default == "":
+        default = " "
+    default = str(default)
+    edit_text = default
+    if edit and len(update) == 0:
+        if prompt == "Your input: ":
+            prompt = "Edit as needed: "
+        # edit_text = default
+        if edit_text == "":
+            return ""
+    # dbug(shift)
+    # dbug(prompt)
+    """--== Process ==--"""
+
+    """--== standard input ==--"""
+    if not edit and len(update) == 0:
+        # dbug(f"shift: {shift} max_val_len: {max_val_len} nclen(default): {nclen(default)}")
+        default_msg = ""
+        if len(default) > 0:
+            default_msg = f"[{default:>{max_val_len}}]: "
+            if prompt.endswith(": "):
+                prompt = prompt.rstrip(": ") + default_msg
+        if centered_b:
+            prompt = centered(prompt, shift=shift)[0]
+        if noedit_b:
+            printit(prompt)
+            return default
+        response = input(prompt) or default
+
+    """--== update dictionary values ==--"""
+    if len(update) > 0:
+        response = usr_update(update, centered=centered_b, shift=shift, edit=edit)
+        return update
+
+    """--== edit default input ==--"""
+    # dbug(f"edit: {edit} update: {update} centered: {centered_b} shift: {shift} default={default}")
+    if edit:
+        # dbug(f"edit: {edit} update: {update} centered: {centered_b} shift: {shift} default={default}")
+        readline.set_startup_hook(lambda: readline.insert_text(edit_text))
+        shift = shift - (max_val_len // 2)
+        response = ""
+        try:
+            if centered_b:
+                prompt = centered(prompt, shift=shift)[0]
+            if noedit_b:
+                printit(prompt + default)
+                return default
+            response = input(prompt)
+        finally:
+            if edit:
+                readline.set_startup_hook(None)
+
+    # """--== determine default ==--"""
+    if not edit and len(default) > 0:
+        # dbug(f"edit: {edit}  providing dflt: {default} if empty response: {response} default={default}")
+        if response is None:
+            response = ""
+        if default is None:
+            default = ""
+        if response == "" and nclen(default) > 1:
+            response = default
+    return response
+    # ### EOB def usr_input(*args, **kwargs): ### #
+
+
+def usr_input_demo(*args, **kwargs):
+    """
+    WIP
+    """
+    cntr_ops = [False, True]
+    for cntr in cntr_ops:
+        printit("Just a simple input ...")
+        ans = usr_input(centered=cntr)
+        dbug(ans)
+        print("-"*40)
+        """--== SEP_LINE ==--"""
+        dflt = "This is the default"
+        dbug(dflt)
+        prompt = f"Just hit enter here to test the dflt: "
+        printit(f"supplying prompt: {prompt} and dflt: {dflt}")
+        ans = usr_input(prompt=prompt, dflt=dflt, centered=cntr)
+        dbug(ans)
+        print("-"*40)
+        """--== SEP_LINE ==--"""
+        ans = usr_input(dflt="Edit this big ole string until you are happy", edit=True, centered=cntr)
+        dbug(ans)
+        print("-"*40)
+        """--== SEP_LINE ==--"""
+        ans = usr_input(dflt="You can not edit this ", edit=False, centered=cntr)
+        dbug(ans)
+        print("-"*40)
+        """--== SEP_LINE ==--"""
+        my_d = {"elem1": "is one", "elem2": "is two", "elem3": "is three"}
+        print(f"Starting usr_input with update={my_d} centered but no edit")
+        ans_d = usr_input(update=my_d, centered=cntr)
+        dbug(ans_d)
+        print("-"*40)
+        """--== SEP_LINE ==--"""
+        my_d = {"elem1": "is one", "elem2": "is two", "elem3": "is three"}
+        ans_d = usr_input(update=my_d, centered=cntr, edit=True)
+        dbug(ans_d)
+        dbug("Stop here....", 'ask')
+    # ### EOB def usr_input_demo(*args, **kwargs): ### #
+
+
 # ###########################################
 def usr_update(my_d, fix_l=[], *args, **kwargs):
     # #######################################
@@ -9229,35 +9901,72 @@ def usr_update(my_d, fix_l=[], *args, **kwargs):
     NOTE: what is in the passed dict values is what will be presented as the default.
     aka: user_edit()
     """
+    """--== Debugging ==--"""
     # dbug(funcname())
+    # dbug(args)
+    # dbug(kwargs)
     """--== Config ==--"""
-    max_size = kvarg_val(["max", " max_size"], kwargs, dflt=40)
-    """--== Process ==--"""
-    if len(fix_l) == 0:
-        fix_l = list(my_d.keys())
-    # dbug(fix_l)
+    # max_size = kvarg_val(["max", " max_size"], kwargs, dflt=40)
+    edit_b = bool_val(["edit", "editable", "edit_txt", "edit_text"], args, kwargs, dflt=False)
+    centered_b = bool_val(["center", "centered", "cntr"], args, kwargs, dflt=False)
+    noedits_l = kvarg_val(["noedits", "no_edits"], kwargs, dflt=[])  # which keys will not be allowed editing of any form but will be presented/displayed
+    # dbug(centered_b)
+    """--== Init ==--"""
     fix_d = {}
-    max_k = 0
-    max_v = 0
+    if len(fix_l) == 0:
+        # fix_l was not supplied so make it equal to list(my_d.keys())
+        fix_l = list(my_d.keys())
     for k in fix_l:
         # put in values from supplied my_d
-        fix_d[k] = my_d[k]
-        if nclen(k) > max_k:
-            max_k = nclen(k)
-        if nclen(my_d[k]) > max_v:
-            max_v = nclen(my_d[k])
-    new_d = {}
+        fix_d[k] = my_d[k]  # give fix_d[k] the value from my_d[k]
+    max_k = maxof(list(fix_d.keys()))
+    # dbug(list(my_d.keys()))
+    # dbug(max_k)
+    max_v = maxof(list(fix_d.values()))
+    new_d = my_d.copy()
+    """--== Process ==--"""
+    # dbug(fix_l)
     for k, v in fix_d.items():
-        ans = cinput(f"Please enter new [{k:<{max_k}}] default: [{v:>{max_v}}]: ") or v
-        ans = str(ans)
-        if ans.lower() == "q":
-            # do_close(center=True, box_color="red on black")
-            break
+        # dbug(f"k: {k} v: {v}")
+        if v == "":  # this actually will get taken care of in usr_input but doing it anyway
+            v = " "
+        if k in noedits_l:
+            noedit = True
+            # dbug(f"making noedit: {noedit} k: {k}")
+        else:
+            noedit = False
+            # dbug(f"k: {k} not found in noedits_l: {noedits_l}")
+        prompt = "Please enter new value for: "  # [{k:{max_k}}]"
+        if edit_b:
+            # dbug(f"max_k: {max_k} max_v: {max_v}")
+            prompt += f"[{k:<{max_k}}]: "
+            ans = usr_input(prompt=prompt, default=v, centered=centered_b, max_v=max_v, edit=edit_b, noedit=noedit)
+        else:
+            # dbug(f"max_k: {max_k} max_v: {max_v} k: {k} v: {v}")
+            prompt += f"[{k:<{max_k}}]: "
+            ans = usr_input(edit=edit_b, prompt=prompt, centered=centered_b, dflt=v, max_v=max_v, noedit=noedit)
+            ans = str(ans)
+            if ans.lower() == "q":
+                # do_close(center=True, box_color="red on black")
+                break
         new_d[k] = ans
-    for k, v in new_d.items():
-        my_d[k] = v
-    return my_d
-    # ### EOB def usr_update(my_d, fix_l, *args, **kwargs): ### #
+    # dbug(f"Returning my_d: {new_d}")
+    return new_d
+    # ### EOB def usr_update(my_d, fix_l=[], *args, **kwargs): ### #
+
+
+def usr_update_demo(*args, **kwargs):
+    """
+    WIP
+    """
+    """--== SEP_LINE ==--"""
+    for centered in [False, True]:
+        for edit in [False, True]:
+            my_d = {"one": 1, "two": 2,  "three": "3", "big value": "this is a long string", 'modified': datetime.now().strftime("%Y-%m%d %H:%M")}
+            noedits = ["modified"]
+            printit(f"usr_update(my_d, centered={centered}, edit={edit}", 'boxed', centered=centered )
+            new_d = usr_update(my_d, centered=centered, edit=edit, noedits=noedits)
+            gtable(new_d, 'prnt', 'hdr', centered=centered, title="no edit of default", footer=dbug('here'))
 
 
 # #############################################
@@ -9342,6 +10051,7 @@ def quick_plot(data, *args, **kwargs):
         - save_file: str     # name of file to save the plot figure to.  default=""
         - delimiter: str     # assumes a filename for data (above) and use delimiter to seperate elements in each line of the file
         - hlines: dict       # dictionary eg: {"target": 44, "strike": 33, ...} can be one or several
+        - plines: bool       # pullback_lines - only useful for stock history charts
     returns: df
     NOTE: if a filename is used as data it will get "purified" by removing all comments first (except the first line of a dat file.)
         tail, title and footer only affect the gtable if show is True
@@ -9374,6 +10084,7 @@ def quick_plot(data, *args, **kwargs):
     dat = kvarg_val(["dat"], kwargs, dflt=False)
     dat = bool_val(["dat"], args, kwargs, dflt=dat)  # this needs to be here in combination w/above
     mavgs = bool_val(["mavgs", "mavg", "moving_avgs"], args, kwargs, dflt=False)
+    # dbug(mavgs)
     box_text = kvarg_val(["box_text", 'box_txt', "text", "txt"], kwargs, dflt="")
     # dbug(box_text)
     savefile = kvarg_val(["save", "savefile", "save_file"], kwargs, dflt="")
@@ -9381,7 +10092,7 @@ def quick_plot(data, *args, **kwargs):
     hlines = kvarg_val(["trgt", "target", 'strike', "line", "hline", "hlines"], kwargs, dflt=0)  # must be a dictionary
     # dbug(hlines)
     subplot = kvarg_val(["subplot", "sub_plot", "sub"], kwargs, dflt="")
-    pb_lines = bool_val(["pb_lines", "pblines", "pullback_lines"], args, kwargs, dflt=False)
+    pb_lines = bool_val(["pb_lines", "pblines", "pullback_lines"], args, kwargs, dflt=False)  # only useful for stock history charts
     delimiter = kvarg_val(["delim", "delimiter", "dlmtr"], kwargs, dflt=",")
     # index_b = bool_val(["index", "indexes", "idx"], args, kwargs, dflt=False)
     """--== Inits ==--"""
@@ -9542,7 +10253,7 @@ def quick_plot(data, *args, **kwargs):
     # dbug(df['S&P'])
     # dbug(df.info())
     if mavgs:
-        # dbug(f"selections_l: {selections_l}")
+        # dbug(f"selections_l: {selections_l} mavgs: {mavgs}")
         df["50ma"] = df[selections_l[0]].rolling(window=50, min_periods=0).mean()
         df["200ma"] = df[selections_l[0]].rolling(window=200, min_periods=0).mean()
         selections_l.append("50ma")
@@ -9561,15 +10272,15 @@ def quick_plot(data, *args, **kwargs):
             # hline = list(hline.values())[0]
             hline = v
             # dbug(hline_name)
-            # dbug(hline)
-            # dbug(type(hline))
-            if float(hline) > 0:
-                # dbug(len(df))
-                hline_col = []
-                for x in range(len(df)):
-                    hline_col.append(hline)
-                df[hline_name] = hline_col
-                selections_l.append(hline_name)
+            # dbug(f"hline: {hline} type(hline): {type(hline)}")
+            if hline != "":
+                if float(hline) > 0:
+                    # dbug(len(df))
+                    hline_col = []
+                    for x in range(len(df)):
+                        hline_col.append(hline)
+                    df[hline_name] = hline_col
+                    selections_l.append(hline_name)
     """--== Intervals (Experimental) ==--"""
     # interval = kvarg_val(["interval", "int", "xinterval", "xskip"], kwargs, dflt=40)
     # interval = int(len(df) / 20)  #num of ticks = 20 here
@@ -9635,16 +10346,6 @@ def quick_plot(data, *args, **kwargs):
                 df.iloc[:, 0] = pd.to_datetime(pd.Series(df.iloc[:, 0]), format=dtformat, errors='coerce')
             # dbug(df[:3])
             # dbug(df.info)
-#         if type(df.index) == pd.core.indexes.datetimes.DatetimeIndex:
-#             if colnames[0].lower() in ("date", "time"):
-#                 # dbug("Making the first column a date-time series...")
-#                 # dbug(df[:2])
-#                 # date_entry = str(df.iloc[0][0])
-#                 date_entry = str(df.index[0])
-#                 # dbug(date_entry)
-#                 dtformat = get_dtime_format(date_entry)
-#                 dbug(dtformat)
-#                 df.iloc[:, 0] = pd.to_datetime(pd.Series(df.iloc[:, 0]), format=dtformat, errors='coerce')
         """--== SEP_LINE ==--"""
         # dbug('ask')
         # dbug(df)
@@ -9706,24 +10407,30 @@ def quick_plot(data, *args, **kwargs):
             # x_val = df.index[int(0.03*indx_len)]
             x_val = df.index[0]
             # dbug(x_val)
+            """--== correction ==--"""
             try:
                 correction = round(0.9 * float(pri_max), 2)
             except Exception as Error:
                 correction = 0
                 dbug(Error)
-            # dbug(f"pri_max: {pri_max} 90% or pri_max (correction): {correction}")
-            # dbug(correction)
-            top_plt.axhline(y=correction, color='cyan', linestyle="--", label="correction")
-            top_plt.text(x_val, correction, "Correction", va='center', ha='center', backgroundcolor='w')
+            top_plt.axhline(y=correction, color='cyan', linestyle="--")
+            if len(box_text) < 10:
+                top_plt.text(x_val, correction, "Correction", va='center', ha='center', backgroundcolor='w')
+            """--== bear ==--"""
             bear = 0.8 * pri_max
             top_plt.axhline(y=bear, color='cyan', linestyle="-.")
-            top_plt.text(x_val, bear, "Bear", va='center', ha='center', backgroundcolor='w')
+            if len(box_text) < 10:
+                top_plt.text(x_val, bear, "Bear", va='center', ha='center', backgroundcolor='w')
+            """--== superbear ==--"""
             superbear = 0.7 * pri_max
             top_plt.axhline(y=superbear, color='cyan', linestyle="-.")
-            top_plt.text(x_val, superbear, "SuperBear", va='center', ha='center', backgroundcolor='w')
-            ultrabear = 0.6 * pri_max
-            top_plt.axhline(y=ultrabear, color='cyan', linestyle="-.")
-            top_plt.text(x_val, ultrabear, "UltraBear", va='center', ha='center', backgroundcolor='w')
+            if len(box_text) < 10:
+                top_plt.text(x_val, superbear, "SuperBear", va='center', ha='center', backgroundcolor='w')
+            """--== ultrabear ==--"""
+            uberbear = 0.6 * pri_max
+            top_plt.axhline(y=uberbear, color='cyan', linestyle="-.")
+            if len(box_text) < 10:
+                top_plt.text(x_val, uberbear, "UberBear", va='center', ha='center', backgroundcolor='w')
         """--== SEP_LINE ==--"""
         footer = "\n\n" + footer + f" {dbug('here')} "
         plt.figtext(0.5, 0.01, footer, ha='center', fontsize=11)
@@ -9860,229 +10567,8 @@ def boxed_demo():
     for n, box in enumerate(range(int(ans)), 1):
         boxes.append(boxed(f"This is\nBox {n}"))
     printit(gcolumnize(boxes), 'centered')
+    # ### EOB def boxed_demo(): ### #
 
-
-def gtable_demo():
-    """--== SEP_LINE ==--"""
-    tst_d = {"simple": "table", "goes": "here", "line three": "this is a very very long exstensive and verbose line or string", "line four": "If you thought that last line was long it was only because you had not come across this very long, exstensively verbose, long line."}
-    gtable(tst_d, 'prnt', 'centered', 'wrap', 'hdr', 'index', colnames=["col1", "col2"], title="tst_d dict w/wrap default col_limit=60", col_limit=60, footer=dbug('here'))
-    dbug('ask')
-    gtable(tst_d, 'prnt', 'centered', 'hdr', colname=["col1", "col2"], title="tst_d dict no wrap default col_limit=60", col_limit=60, footer=dbug('here'))
-    dbug('ask')
-    gtable(tst_d, 'prnt', 'centered', title="tst_d dict no wrap col_limit=140", col_limit=140, footer=dbug('here'))
-    gtable(tst_d, 'prnt', 'centered', 'wrap', title="tst_d dict w/wrap", footer=dbug('here'))
-    gtable(tst_d, 'prnt', 'centered', 'wrap', title="tst_d dict w/wrap and col_limit=30", footer=dbug('here'), col_limit=30)
-    dbug('ask', 'centered')
-    printit("Now run gtable with: tst_d dict w/hdr & end_hdr, wrap, alt, index and clolimit=30", 'centered')
-    box1 = gtable(tst_d, 'header', 'wrap', title="Short title w/wrap", footer=dbug('here'), end_hdr=True, col_limit=30)
-    box2 = gtable(tst_d, 'header', 'index', 'alt', 'wrap', title="Short title w/wrap, alt, and w/index", footer=dbug('here'), end_hdr=True, col_limit=30)
-    gcolumnize([box1, box2], 'prnt', 'centered', 'boxed', title="Two gtables boxed and centered", box_color="yellow! on black", footer=dbug('here'))
-    # dbug('ask', 'centered')
-    """--== SEP_LINE ==--"""
-    my_lol = [["name", "value", "make", "model"], ["two", "2", "foo", "bar"], ["twenty_two", "22", "bing", "bang"],
-            ["one", "1", "boom", "bam"], ["five", "5", "tik", "tok"], ["three", "3", "string", "strum"], ["four", "4", "ping", "pong"]]
-    title = "with hdr and alt"
-    gtable(my_lol, 'prnt', 'centered', 'hdr', 'alt', alt_clr="rgb(50,50,50)", title=title, footer=dbug('here'))
-    """--== SEP_LINE ==--"""
-    my_d = {"col1": 1, "col2": 2, "col3": 3, "col4": 4, "col5": "col5 with a very very long winded line that has man many chacters in it. Do not be alarmed by it's length", "col6": ["This is six", "another line"], "col7": 7}
-    colnames = ["col1", "col2", "col3", "col4", "col5", "col6"]
-    gtable(my_d, 'prnt', 'hdr', title="Simple Dictionary w/colnames and now with header and colnames", footer=dbug('here'), colnames=colnames)
-    print()
-    title = "with hdr and sortby=1"
-    gtable(my_lol, 'prnt', 'hdr', 'centered', sortby=1, title=title, footer=dbug('here'))
-    dbug('ask')
-    title = "with hdr and sortby=value"
-    gtable(my_lol, 'prnt', 'hdr', 'centered', sortby="value", title=title, footer=dbug('here'))
-    title = "with hdr and sortby_n=value"
-    gtable(my_lol, 'prnt', 'hdr', 'centered', sortbyn="value", title=title, footer=dbug('here'))
-    dbug('ask')
-    title = "with hdr and sortby_n=value filterby value: 2"
-    gtable(my_lol, 'prnt', 'hdr', 'centered', sortbyn="value", filterby={'value': '2'}, title=title, footer=dbug('here'))
-    title = "with hdr and sortby_n=value filterby value: 2 select_cols=[name, value, make]"
-    gtable(my_lol, 'prnt', 'hdr', 'centered', sortbyn="value", filterby={'value': '2'}, select=['name', 'value', 'make'], title=title, footer=dbug('here'))
-    dbug('ask')
-    gtable(my_lol, 'prnt', 'hdr', 'centered', 'end_hdr', sortbyn="value", filterby={'value': '2'}, select=['name', 'value', 'make'], title=title, footer="with end_hdr" + dbug('here'))
-    """--== SEP_LINE ==--"""
-    printit(gtable.__doc__, 'boxed', 'centered', title=" gtable() doc ", footer=dbug('here'), box_color="yellow! on black!")
-    askYN("Continue: ", 'centered')
-    csv_lines = """
-    sym,lpr,chg,pchg,trgt,ask,iv,pom,cp,date,blks,pc,pp,sr,pe,fpe,div,roe,rl,rh,fv,mv,peg,shrs,acnt,misc,misc2,status,score,rng_pcnt,avg,mcap,ps,pb,cps,cr,dr,beta,eps,div5yr,pinst,pinsdr,ma200,ma50,notes,rundate
-AVGO,  520.86,  -29.27,  -5.32,  450.0,  70,  31.0,  95,  535.48,  20220730,  1,  P,  __,  A+,  25,  12,  15.9,  39,  463,  678,  302,  624,  1.09,  xxx,  1510,  ,  ,  ,  80.0,  26.91,  76.5,  210936823808,  7.03,  10,  22.3,  2,  188.02,  1.1,  20.19,  2.96,  82.11,  2.35,  570.38,  517.43,  *t,  20220827
-ALSN,  37.14,  -1.24,  -3.23,  30.0,  045,  50.0,  82,  35.30,  20220412,  2,  P,  __,  C_,  08,  06,  0.8,  62,  32,  42,  69,  ___,  0.55,  xxx,  1510,  ,  ,  ,  60.0,  51.4,  54.0,  3574528256,  1.4,  5,  1.28,  2,  336.98,  0.92,  4.62,  1.62,  102.23,  0.84,  38.2,  38.49,  *t,  20220827
-AMAT,  98.80,  -6.2,  -5.9,  85.0,  60,  47.0,  87,  98.80,  20220828,  1,  P,  __,  B+,  13,  12,  1,  55,  82,  168,  112,  142,  1.1,  xxx,  1510,  22sep85in@60,  , ofrd22sep_P:NO,  80.0,  19.53,  80.0,  85950767104,  3.42,  7,  4.11,  2,  45.2,  1.51,  7.47,  1.18,  78.48,  0.35,  124.2,  99.13,  ,  20220828
-BABA,  98.00,  -1.89,  -1.89,  75.0,  129,  73.0,  80,  89.37,  20220730,  1,  P,  ___,  _+,  45,  11,  0,  02,  73,  183,  32,  100,  316.17,  xxx,  1510,  audit_probs_SEC,  ,  ,  30.0,  22.73,  53.5,  260032233472,  0.3,  0,  174.82,  2,  16.91,  0.58,  2.16,  None,  16.44,  0.01,  109.8,  102.31,  *t,  20220827
-BAC,  34.03,  -1.11,  -3.16,  28.0,  11,  35.0,  92,  33.05,  20220727,  1,  P,  __,  C+,  10,  09,  0.84,  10,  29,  51,  48,  41,  1.58,  xxx,  1510,  ,  ,  ,  60.0,  22.86,  68.5,  273439211520,  2.99,  1,  88.88,  0.0,  0.0,  1.4,  3.2,  2,  70.88,  0.12,  39.99,  33.29,  *t,  20220827
-    """
-    csv_l = csv_lines.split("\n")
-    csv_l = [line for line in csv_l if line != '' and not line.isspace()]  # get rid of empty lines
-    csv_lol = []
-    for row in csv_l:
-        elems = row.split(",")
-        elems = [str(elem).strip() for elem in elems]
-        csv_lol.append(elems)
-    selected = csv_lol[0][:20]
-    selected.append('div5yr')
-    gtable(csv_lol, 'hdr', 'prnt', 'centered', 'alt', title="Selected data from a csv file and selected columns w/alt", footer="alt_color: default " + dbug('here'), selected=selected)
-    print()
-    gtable(csv_lol, 'hdr', 'prnt', 'centered', 'alt', alt_color="on rgb(60,60,100)", pad='', title="Selected columns, alt and w/o padding", footer="alt_color: 'on rgb(60,60,100)' " + dbug('here'), selected=selected)
-    print()
-    gtable(csv_lol, 'prnt', 'hdr', 'centered', pad='', col_colors=[], title="Selected columns and w/o padding no column_colors", footer=dbug('here'), selected=selected)
-    dbug('ask')
-    """--== SEP_LINE ==--"""
-    my_d = {"one": 1, "two": 2, "three": 3, "four": 4, "One thousand": 1000, "One million": 1000000, "col 7": "    this has lots of white space    "}
-    gtable(my_d, 'prnt', 'centered', title="Simple Dictionary", footer=dbug('here'))
-    print()
-    box1 = gtable(my_d, 'prnt', 'centered', 'strip', pad='', title="cell_pad=''")
-    dbug('ask')
-    box2 = gtable(my_d, 'prnt', 'hdr', title="Simple Dictionary w/header", footer=dbug('here'))
-    print()
-    box3 = gtable(my_d, 'prnt', 'hdr', title="Simple Dictionary w/header colnames=keys", footer=dbug('here'), colnames="keys")
-    print()
-    gtable(my_d, 'prnt', 'hdr', title="Simple Dictionary w/header colnames=keys exclude=['three']", exclude=['three'], footer=dbug('here'), colnames="keys")
-    print()
-    gtable(my_d, 'prnt', title="Simple Dictionary colnames=keys", footer=dbug('here'), colnames="keys")
-    print()
-    printit(gcolumnize([box1, box2]), 'boxed', box_color="red! on black", title="Two Boxes", footer=dbug('here'))
-    print()
-    printit(gcolumnize([box1, box2]), 'boxed', 'centered', box_color="red! on black", title="Two Boxes centered", footer=dbug('here'))
-    dbug('ask')
-    """--== SEP_LINE ==--"""
-    my_d = {"one": 1, "two": 2, "three": 3, "four": 4, "One thousand": 1000, "One million": 1000000, "col 7": "    this has lots of white space    "}
-    colnames = ["column one", "column two", "column three", "column four", "column five", "column six", "column seven"]
-    box1 = gtable(my_d, 'prnt', title="Simple Dictionary", footer=dbug('here'))
-    print()
-    box2 = gtable(my_d, 'prnt', 'hdr', title="Simple Dictionary w/header", footer=dbug('here'))
-    print()
-    printit(gcolumnize([box1, box2]), 'centered')
-    print()
-    dbug('ask')
-    box3 = gtable(my_d, 'prnt', title="Simple Dictionary", footer=dbug('here'))
-    box4 = gtable(my_d, 'prnt', 'hdr', title="Simple Dictionary w/header", footer=dbug('here'))
-    box5 = gtable(my_d, 'prnt', title="Simple Dictionary w/colnames='keys'", footer=dbug('here'), colnames="keys")
-    box6 = gtable(my_d, 'prnt', title="Simple Dictionary w/colnames", footer=dbug('here'), colnames=colnames)
-    dbug("GOing to box7...", 'ask')
-    dbug(my_d)
-    box7 = gtable(my_d, 'prnt', 'hdr', title="Simple Dictionary w/colnames w/header", footer=dbug('here'), colnames=colnames)
-    dbug("Stop",'ask', 'boxed', box_color="red! on rgb(80,30,80)")
-    print()
-    printit(gcolumnize([box1, box2]) + box3, 'centered', 'boxed', title="Two boxes in one row and another box in the next", footer=dbug('here'))
-    print()
-    gtable(my_d, 'prnt', 'centered', 'hdr', title="Simple dictionary w/header", footer=dbug('here'))
-    dbug('ask', 'centered')
-    my_l = list(my_d.values())
-    my_l.append(12345)
-    my_l.append(123.45)
-    # dbug(my_l)
-    colnames = ["column one", "column two", "column three", "column four", "column five", "column six", "big column", "Integer", "Float"]
-    # dbug(colnames)
-    # dbug(my_l)
-    gtable(my_l, 'prnt', 'centered', title="Simple list of values", footer=dbug('here'))
-    print()
-    gtable(my_l, 'prnt', 'centered', 'hdr', title="Simple list of values w/header and colnames", footer=dbug('here'), colnames=colnames)
-    print()
-    colnames = []
-    for x in range(len(my_l)):
-        colnames.append(x)
-    # dbug(colnames)
-    # dbug(my_l)
-    gtable(my_l, 'prnt', 'centered', 'hdr', title="Simple list of values w/header and colnames", footer=dbug('here'), colnames=colnames)
-    print()
-    # dbug(list(my_d.values()))
-    dbug('ask', 'centered')
-    """--== SEP_LINE ==--"""
-    my_lol = [
-            ["col1", "col2", "col3", "col4", "col5", "col6", "col7"],
-            [1, 2, 3,4 , 5, 6, 7],
-            ["11", "22", "33", "44", "55", "66", "77"],
-            ["111", "222", "333", "444", "555", "666", "777"],
-            ["1111", "2222", "3333", "4444", "5555", "6666", "7777"]
-            ]
-    gtable(my_lol, title="Simple list of lists (lol)", footer=dbug('here'))
-    print()
-    gtable(my_lol, 'prnt', 'hdr', title="Simple list of lists (lol) w/header", footer=dbug('here'))
-    selected_cols = ["col2", "col4", "col6"]
-    printit(f"Simple list of lists (lol) w/header & selected_cols: {selected_cols}")
-    gtable(my_lol, 'prnt', 'hdr', selected_cols=selected_cols)
-    dbug('ask', 'centered')
-    """--== SEP_LINE ==--"""
-    tst_d = {"simple": "table", "goes": "here", "line three": "this is a very very long exstensive and verbose line or string", "line four": "If you thought that last line was long it was only becuse you had not come across this very long, exstensively verbose, long line."}
-    gtable(tst_d, 'prnt', 'centered', title="tst_d dict no wrap", footer=dbug('here'))
-    gtable(tst_d, 'prnt', 'centered', 'wrap', title="tst_d dict w/wrap", footer=dbug('here'))
-    gtable(tst_d, 'prnt', 'centered', 'wrap', title="tst_d dict w/wrap and col_limit=30", footer=dbug('here'), col_limit=30)
-    printit("Now run gtable with: tst_d dict w/hdr & end_hdr, wrap, alt, index and clolimit=30")
-    gtable(tst_d, 'prnt', 'header', 'index', 'alt', 'wrap', alt_color='on rgb(25,25,25)', title="Short title", footer=dbug('here'), end_hdr=True, col_limit=30)
-    print()
-    dbug('ask', 'centered')
-    """--== SEP_LINE ==--"""
-    tst_d = {"first": ['pupose: re-writes a file with an added line (after or before a pattern) or replace a line, or append a line', '-    I wrote this because I am constantly building csv files with a header line '], "one": 1, "two": [2, 2], "three": 3, "four": ['pupose: re-writes a file with an added line (after or before a pattern) or   replace a line, or append a line', '-    I wrote this because I am constantly building csv files with a header line ']}
-    gtable(tst_d, 'prnt', 'centered' 'wrap', footer=dbug('here'))
-    tst_d = {'add_content': ['pupose: re-writes a file with an added line (after or before a pattern) or replace a line, or append a line', '-    I wrote this because I a  m constantly building csv files with a header line '], "next": 4}
-    gtable(tst_d, 'prnt', 'wrap', 'centered')
-    dbug('ask', 'centered')
-    """--== SEP_LINE ==--"""
-    my_d = {"col1": 1, "col2": 2, "col3": 3, "col4": 4, "col5": 5, "col6": [6, "This is six", "another line"]}
-    gtable(my_d, "prnt", 'centered', title="testing", footer=dbug('here'))
-    my_d = {"col1": 1, "col2": 2, "col3": 3, "col4": 4, "col5": "col5 with a very very long winded line that has man many chacters in it. Do not be alarmed by it's length", "col6": ["This is six", "another line"], "col7": 7}
-    gtable(my_d, "prnt", 'centered', 'wrap', title="testing", footer=dbug('here'))
-    # dbug('ask')
-    kv_cols(my_d, 2, 'prnt','centered',  title="kv_cols 2 columns", footer=dbug('here'))
-    kv_cols(my_d, 2, 'prnt', 'centered', 'boxed', title="kv_cols 2 columns boxed ", footer=dbug('here'), mstr_box_color="blue! on white")
-    dbug('ask')
-    # nums = [1, 20, 40, 3, 33, 55, 11, "21"]
-    # dbug(nums)
-    # dbug(sorted(nums, key=lambda x: float(x)))
-    """--== SEP_LINE ==--"""
-    import pandas as pd
-    my_df = pd.DataFrame(my_lol)
-    # my_df.rename(columns=my_df.iloc[0]).drop(my_df.index[0])  # uses the first row as colnames and uses the rest of the rows for the df
-    gtable(my_df, 'prnt', 'centered', 'end_hdr', colnames="firstrow", title="Using a df", footer="with end_hdr")
-    my_d = {"col1": 1, "col2": 2, "col3": 3}
-    gtable(my_d, 'prnt', 'hdr', 'centered', 'shadowed', 'human', title=dbug('here'), footer="gtable demo", colnames=["Key", "Value"])
-    dbug('ask')
-    sym = "CVS"
-    with Spinner(f"Working on getting info for Ticker: {sym} then gtable(sym.info...): ", 'elapsed', 'centered'):
-        try:
-            import yfinance as yf
-            sym = yf.Ticker(sym)
-            my_d = sym.info
-            # dbug(my_d)
-            # dbug(type(my_d))
-            # dbug(len(my_d))
-            # dbug(type(my_d[0]))
-            print()
-            gtable(my_d, 'prnt', 'centered', 'hdr', 'shadowed', title=dbug('here'), footer=" gtable demo ")
-            # if r is None:
-            #    dbug('ask')
-        except Exception as Error:
-            dbug(Error)
-            dbug('ask')
-    print()
-    kv_cols(my_d, 2, 'prnt', 'centered', title="kv_cols(my_d)", footer=dbug('here'))
-    dbug('ask')
-    """--== SEP_LINE ==--"""
-    my_lol = [["Asset", "type", "value", "age"],
-            ["house", "cape cod", "120,000", "55yrs"],
-            ["car", "CX5", 3000, 7],
-            ["Vermeer", "The Girl with a Pearl Earing", 30000000, 357],
-            ["Magic Kit", "With case", 300.4657, 82],
-            ["coin", "kugarand", "[1600]", 45]]
-    """--== SEP_LINE ==--"""
-    title = "  Need a very long, desparately long, and  wider than usaual title " + dbug('here')
-    gtable(my_lol, 'prnt', 'hdr', 'centered', 'human', title=title, footer=" gtable demo " + dbug('here'))
-    """--== SEP_LINE ==--"""
-    # dbug(f"Now run gtable for my_lol[0]: {my_lol}")
-    gtable(my_lol[0], 'prnt', 'centered', title="keys only ", footer=dbug('here'))
-    # dbug(my_lol[0])
-    dbug('ask')
-    """--== SEP_LINE ==--"""
-    title = "list-of-lists"
-    gtable(my_lol, 'prnt', 'hdr', 'centered', 'human', rnd=2, title=title, footer=" gtable demo ")
-    # gtable(my_lol, 'prnt', 'hdr', 'human', rnd=2,  title=title, footer=" gtable demo " + dbug{'here'})
-    """--== SEP_LINE ==--"""
-    my_d = {"one": 1, "two": 2, "three": 3, "four": 4, "One thousand": 1000, "One million": 1000000}
-    kv_cols(my_d, 2, 'prnt', 'centered', title="kv_cols(my_dictionary, cols=2)", footer=dbug('here'))
-    kv_cols(my_d, 2, 'prnt', 'centered', 'boxed', box_color="red!", mstr_box_clr="yellow!", title="kv_cols(my_dictionary, cols=2) boxed", footer=dbug('here'))
-    # ### EOB def gtable_demo(): ### #
 
 
 # #############
@@ -10223,24 +10709,6 @@ def do_func_docs():
     funcs_l = [x for x in funcs_l if x.strip() not in ("main", 'tst')]
     funcs_l = [x for x in funcs_l if x.strip() if "demo" not in x]
     funcs_l = sorted(funcs_l)
-    funcs_d = {}
-#     for n, func in enumerate(funcs_l):
-#         if n > 4:
-#             break
-#         # dbug(func)
-#         eval_this = func + '.__doc__'
-#         # dbug(eval_this)
-#         doc = eval(eval_this)
-#         if doc.startswith("\n"):
-#             doc = doc.lstrip("\n")
-#         # box1 = boxed(func)
-#         doc = doc.split("\n")
-#         doc = [line.lstrip() for line in doc if len(line) > 4]
-#         func_d = {func: doc}
-#         gtable(func_d, 'prnt', 'wrap', col_limit=100, footer=dbug('here'))
-#         funcs_d[func] = doc
-#         # dbug('ask')
-#
     # gtable(funcs_d, 'prnt', 'wrap', 'center', col_limit=100, footer=dbug('here'))
     # dbug('ask')
     """--== user select ==--"""
@@ -10263,8 +10731,7 @@ def do_func_docs():
         gtable(doc_d, 'prnt', 'wrap', 'hdr', 'center', col_limit=120, colnames="firstrow")
 
 
-
-def has_substr(text_s, chk_l,  *args, **kwargs):
+def has_substr(text_s, chk_l, *args, **kwargs):
     """
     purpose: determin if any sub-string in chk_l is in text_s
         column_name = "dtime"
@@ -10283,7 +10750,7 @@ def has_substr(text_s, chk_l,  *args, **kwargs):
     has_substr_b = False
     for sstr in chk_l:
         if ci_b:
-            sstr  = sstr.lower()
+            sstr = sstr.lower()
         if sstr in text_s:
             has_substr_b = True
     return has_substr_b
@@ -10334,7 +10801,7 @@ def do_func_demos():
     eval(ans)
     if askYN(f"Do you want to see the code for this demo: {ans}? ", 'center'):
         # dbug(ans)
-        func = ans.replace('()', '\(')
+        func = ans.replace('()', '\\(')
         # dbug(func)
         start_pat = f"^def {func}"
         # dbug(start_pat)
@@ -10367,7 +10834,7 @@ def get_mod_docs(mod="gtools", *args, fn="*", **kwargs):
     returns cnt
     """
     """--== Imports ==--"""
-    import inspect
+    # import inspect
     from inspect import getmembers, isfunction
     # from gtools import wrapit, chk_substr, boxed
     boxed_b = bool_val(["boxed", "box"], args, kwargs, dflt=True)
